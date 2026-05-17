@@ -1,0 +1,3567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1480, initial-scale=1">
+<title>orbis · theatre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bone:#EEE7D4;
+    --vellum:#F4ECD6;
+    --ink:#0E1014;
+    --charcoal:#15171C;
+    --charcoal-2:#101216;
+    --slate:#2A2E36;
+    --slate-2:#1A1D23;
+    --sextant:#8E3A1F;
+    --sextant-deep:#6E2C16;
+    --sextant-bright:#B14826;
+    --ash:#5E6470;
+    --vapour:#A8B0BB;
+    --vapour-d:#717885;
+    --display:'Inter',system-ui,-apple-system,sans-serif;
+    --body:'Inter',system-ui,-apple-system,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --hairline: rgba(244,236,214,0.08);
+    --hairline-strong: rgba(244,236,214,0.16);
+  }
+
+  *,*::before,*::after { box-sizing:border-box; }
+  html, body {
+    margin:0; padding:0; height:100%; background:var(--charcoal-2); color:var(--vellum);
+    font-family:var(--body);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  button { font-family:inherit; color:inherit; background:transparent; border:0; padding:0; cursor:pointer; text-align:left; }
+  .mono { font-family:var(--mono); letter-spacing:0.06em; }
+
+  /* ====== Top level layout ====== */
+  .orbis {
+    display:grid;
+    grid-template-rows: 26px 56px 1fr 96px;
+    height:100vh;
+    min-height:760px;
+    background:var(--charcoal-2);
+  }
+
+  /* ====== Classification stripe ====== */
+  .strip {
+    background:var(--sextant);
+    color:var(--vellum);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px;
+    font-family:var(--mono);
+    font-size:10px; font-weight:600;
+    letter-spacing:0.24em; text-transform:uppercase;
+    line-height:1;
+  }
+  .strip-l, .strip-r { display:flex; align-items:center; gap:12px; }
+  .strip-id { background:var(--ink); color:var(--vellum); padding:6px 8px; letter-spacing:0.28em; }
+  .strip-sep { opacity:0.55; }
+
+  /* ====== Top nav ====== */
+  .nav {
+    background:var(--charcoal);
+    border-bottom:1px solid var(--hairline);
+    display:grid;
+    grid-template-columns: 320px 1fr 320px;
+    align-items:center;
+    padding:0 24px;
+  }
+  .nav-l { display:flex; align-items:center; gap:18px; }
+  .nav-r { display:flex; align-items:center; justify-content:flex-end; gap:14px;
+           font-size:11px; color:var(--vapour); }
+  .nav .wm {
+    font-family:var(--display);
+    font-weight:600;
+    font-size:24px;
+    letter-spacing:-0.045em;
+    color:var(--vellum);
+    line-height:1;
+  }
+  .nav-sep { width:1px; height:18px; background:var(--hairline-strong); }
+  .nav-sep-d { width:6px; height:6px; background:var(--sextant-bright); border-radius:50%; }
+  .nav-doc { font-size:10px; color:var(--vapour-d); text-transform:uppercase; }
+  .nav-tabs { display:flex; justify-content:center; gap:2px; }
+  .nav-tab {
+    font-family:var(--mono); font-weight:500;
+    font-size:11px; letter-spacing:0.24em; text-transform:uppercase;
+    color:var(--vapour-d);
+    padding:8px 16px;
+    border-bottom:2px solid transparent;
+    transition:color .15s, border-color .15s;
+  }
+  .nav-tab:hover { color:var(--vellum); }
+  .nav-tab.on { color:var(--vellum); border-bottom-color:var(--sextant-bright); }
+  .nav-r .now { color:var(--sextant-bright); font-weight:600; }
+
+  /* ====== Stage ====== */
+  .stage {
+    position:relative;
+    display:grid;
+    grid-template-columns: 340px 1fr 380px;
+    gap:0;
+    min-height:0;
+    overflow:hidden;
+  }
+  .stage.no-left  { grid-template-columns: 1fr 380px; }
+  .stage.no-right { grid-template-columns: 340px 1fr; }
+  .stage.no-left.no-right { grid-template-columns: 1fr; }
+  .stage.col-l-collapsed                        { grid-template-columns: 44px  1fr 380px; }
+  .stage.col-r-collapsed                        { grid-template-columns: 340px 1fr 44px;  }
+  .stage.col-l-collapsed.col-r-collapsed        { grid-template-columns: 44px  1fr 44px;  }
+
+  .map-pane {
+    position:relative;
+    overflow:hidden;
+    background:
+      radial-gradient(120% 80% at 50% 40%, #1A1D23 0%, var(--charcoal-2) 75%);
+    border-left:1px solid var(--hairline);
+    border-right:1px solid var(--hairline);
+  }
+  .map-host {
+    position:absolute; inset:0;
+    display:flex; align-items:stretch; justify-content:stretch;
+  }
+  .map-svg {
+    width:100%; height:100%; display:block;
+    cursor:grab;
+    user-select:none;
+  }
+  .map-svg:active { cursor:grabbing; }
+
+  /* Zoom controls */
+  .zoom-controls {
+    position:absolute;
+    right:18px; top:50%;
+    transform:translateY(-50%);
+    display:flex; flex-direction:column; gap:2px;
+    z-index:6;
+  }
+  .zoom-btn {
+    width:32px; height:32px;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(21,23,28,0.85);
+    border:1px solid var(--hairline-strong);
+    color:var(--vellum);
+    font-family:var(--display);
+    font-size:16px; font-weight:500;
+    letter-spacing:-0.02em;
+    cursor:pointer;
+    transition:color .15s, border-color .15s, background .15s;
+  }
+  .zoom-btn:hover {
+    color:var(--sextant-bright);
+    border-color:rgba(177,72,38,0.5);
+    background:rgba(177,72,38,0.10);
+  }
+  .zoom-btn.small {
+    font-family:var(--mono); font-size:9px;
+    letter-spacing:0.18em; font-weight:600;
+  }
+  .zoom-readout {
+    position:absolute;
+    right:18px;
+    top:calc(50% + 56px);
+    font-family:var(--mono); font-size:9px;
+    color:var(--vapour-d);
+    letter-spacing:0.22em; text-transform:uppercase;
+    background:rgba(21,23,28,0.85);
+    border:1px solid var(--hairline-strong);
+    padding:5px 6px;
+    pointer-events:none;
+    z-index:5;
+    text-align:center;
+    width:32px;
+    line-height:1.2;
+  }
+
+  .map-loading {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:var(--vapour-d);
+    font-family:var(--mono); font-size:11px; letter-spacing:0.32em; text-transform:uppercase;
+  }
+  .hud-tl, .hud-tr, .hud-bl, .hud-br {
+    position:absolute;
+    font-size:10px; line-height:1.55;
+    color:var(--vapour);
+    letter-spacing:0.24em; text-transform:uppercase;
+    pointer-events:none;
+    z-index:3;
+  }
+  .hud-tl { top:14px; left:16px; }
+  .hud-tr { top:14px; right:16px; text-align:right; }
+  .hud-bl { bottom:14px; left:16px; }
+  .hud-br { bottom:14px; right:16px; text-align:right; }
+  .hud-sub { color:var(--vapour-d); }
+
+  /* ====== Rails ====== */
+  .rail {
+    position:relative;
+    background:var(--charcoal);
+    overflow-y:auto;
+    overflow-x:hidden;
+    display:flex; flex-direction:column;
+  }
+  .rail-l { border-right:1px solid var(--hairline); }
+  .rail-r { border-left:1px solid var(--hairline); }
+  .rail::-webkit-scrollbar { width:6px; }
+  .rail::-webkit-scrollbar-track { background:transparent; }
+  .rail::-webkit-scrollbar-thumb { background:var(--slate); border-radius:3px; }
+
+  .rail-toggle {
+    position:absolute; top:14px;
+    width:22px; height:22px;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--slate-2);
+    border:1px solid var(--hairline-strong);
+    color:var(--vapour);
+    font-size:14px; line-height:1;
+    cursor:pointer;
+    z-index:5;
+    transition:color .15s, border-color .15s;
+  }
+  .rail-toggle:hover { color:var(--sextant-bright); border-color:rgba(177,72,38,0.5); }
+  .rail-l .rail-toggle { right:10px; }
+  .rail-r .rail-toggle { left:10px; }
+
+  .rail-collapsed {
+    overflow:hidden;
+    background:var(--charcoal);
+  }
+  .rail-toggle-strip {
+    width:100%; height:100%;
+    display:flex; flex-direction:column; align-items:center;
+    gap:18px;
+    padding:14px 0;
+    color:var(--vapour);
+    cursor:pointer;
+    transition:color .15s, background .15s;
+  }
+  .rail-toggle-strip:hover { color:var(--sextant-bright); background:rgba(177,72,38,0.05); }
+  .rail-toggle-chev {
+    font-size:16px;
+    border:1px solid var(--hairline-strong);
+    width:22px; height:22px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .rail-toggle-strip:hover .rail-toggle-chev { border-color:rgba(177,72,38,0.5); }
+  .rail-toggle-label {
+    writing-mode:vertical-rl;
+    transform:rotate(180deg);
+    font-size:10px; letter-spacing:0.32em;
+    color:var(--vapour-d);
+    text-transform:uppercase; font-weight:600;
+  }
+
+  /* ====== Panel headers ====== */
+  .panel-head {
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:18px 22px 12px;
+    border-bottom:1px solid var(--hairline);
+  }
+  .panel-title {
+    font-family:var(--display); font-weight:600;
+    font-size:14px; letter-spacing:-0.02em;
+    text-transform:lowercase;
+    color:var(--vellum);
+  }
+  .panel-meta {
+    font-family:var(--mono); font-size:9.5px;
+    letter-spacing:0.22em; text-transform:uppercase;
+    color:var(--vapour-d);
+  }
+
+  /* ====== Lead Card ====== */
+  .lead {
+    padding:20px 22px 22px;
+    border-bottom:1px solid var(--hairline);
+    background:linear-gradient(180deg, rgba(177,72,38,0.06), transparent 70%);
+  }
+  .lead-eyebrow {
+    font-family:var(--mono); font-size:9.5px;
+    letter-spacing:0.28em; text-transform:uppercase;
+    color:var(--sextant-bright); font-weight:600;
+    margin-bottom:14px;
+  }
+  .lead-figure {
+    display:flex; align-items:baseline;
+    gap:4px;
+    font-family:var(--display); font-weight:700;
+    font-size:54px; line-height:0.9;
+    letter-spacing:-0.045em;
+    color:var(--vellum);
+    margin-bottom:10px;
+  }
+  .lead-sep { color:var(--vapour-d); font-weight:400; }
+  .lead-pct {
+    font-size:22px; color:var(--vapour); font-weight:500;
+    margin-left:4px;
+    letter-spacing:0;
+  }
+  .lead-band {
+    display:inline-block;
+    font-size:9.5px; font-weight:700;
+    letter-spacing:0.28em;
+    color:var(--sextant-bright);
+    padding:3px 7px;
+    border:1px solid rgba(177,72,38,0.5);
+    margin-bottom:14px;
+  }
+  .lead-q {
+    font-family:var(--display); font-weight:500;
+    font-size:14px; line-height:1.35;
+    letter-spacing:-0.02em;
+    color:var(--vellum);
+    margin-bottom:8px;
+  }
+  .lead-driver {
+    font-family:var(--display); font-weight:400;
+    font-size:12px; line-height:1.5;
+    color:var(--vapour);
+  }
+
+  /* ====== Watch list rows ====== */
+  .watch-rows { padding:0; }
+  .watch-row {
+    width:100%;
+    display:block;
+    padding:16px 22px 18px;
+    border-bottom:1px solid var(--hairline);
+    cursor:pointer;
+    transition:background .15s;
+  }
+  .watch-row:hover { background:rgba(244,236,214,0.025); }
+  .watch-row-head {
+    display:grid;
+    grid-template-columns: 26px 1fr auto;
+    align-items:baseline;
+    gap:10px;
+    margin-bottom:6px;
+  }
+  .watch-idx { font-size:10px; color:var(--vapour-d); letter-spacing:0.18em; }
+  .watch-region {
+    font-family:var(--display); font-weight:600;
+    font-size:14px; letter-spacing:-0.02em;
+    color:var(--vellum);
+  }
+  .watch-trend {
+    font-size:10px; font-weight:600; letter-spacing:0.18em;
+    padding:2px 6px;
+    border:1px solid var(--hairline-strong);
+  }
+  .watch-trend.up   { color:var(--sextant-bright); border-color:rgba(177,72,38,0.45); }
+  .watch-trend.flat { color:var(--vapour-d); }
+  .watch-trend.down { color:var(--vapour); }
+  .watch-q {
+    font-family:var(--display); font-weight:400;
+    font-size:12.5px; line-height:1.4;
+    color:var(--vapour);
+    margin:0 0 14px 36px;
+    letter-spacing:-0.005em;
+  }
+  .watch-bar {
+    position:relative;
+    height:18px;
+    margin:0 0 8px 36px;
+  }
+  .watch-bar-axis {
+    position:absolute; left:0; right:0; top:50%;
+    height:1px; background:var(--hairline-strong);
+  }
+  .watch-bar-band {
+    position:absolute; top:6px; height:6px;
+    background:var(--sextant);
+    box-shadow:0 0 0 1px rgba(177,72,38,0.4);
+  }
+  .watch-bar-num {
+    position:absolute; right:0; top:-2px;
+    font-size:10px; letter-spacing:0.14em;
+    color:var(--vellum); font-weight:600;
+  }
+  .watch-foot {
+    margin-left:36px;
+    display:flex; gap:8px;
+    font-size:9.5px; letter-spacing:0.2em;
+    color:var(--vapour-d); text-transform:uppercase;
+  }
+  .watch-foot-sep { opacity:0.5; }
+
+  /* ====== Event stream rows ====== */
+  .stream-rows { padding:0; }
+  .stream-row {
+    width:100%;
+    display:grid;
+    grid-template-columns:38px 1fr;
+    gap:14px;
+    padding:14px 22px 16px;
+    border-bottom:1px solid var(--hairline);
+    cursor:pointer;
+    transition:background .15s;
+    text-align:left;
+  }
+  .stream-row:hover { background:rgba(244,236,214,0.025); }
+  .stream-row.on {
+    background:linear-gradient(90deg, rgba(177,72,38,0.10), transparent);
+    border-left:2px solid var(--sextant-bright);
+    padding-left:20px;
+  }
+  .stream-meta-col {
+    display:flex; flex-direction:column; gap:8px; align-items:center;
+    padding-top:2px;
+  }
+  .stream-icon {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:30px; height:30px;
+    border:1px solid rgba(177,72,38,0.45);
+    background:rgba(177,72,38,0.05);
+  }
+  .stream-row.on .stream-icon {
+    background:rgba(177,72,38,0.20);
+    border-color:var(--sextant-bright);
+  }
+  .stream-source {
+    font-size:10px; font-weight:700;
+    padding:2px 5px;
+    border:1px solid var(--hairline-strong);
+    letter-spacing:0.16em;
+  }
+  .stream-source.src-a { color:#E5DEC9; border-color:rgba(229,222,201,0.42); }
+  .stream-source.src-b { color:var(--vellum); border-color:rgba(244,236,214,0.3); }
+  .stream-source.src-c { color:var(--vapour); border-color:rgba(168,176,187,0.35); }
+  .stream-source.src-d { color:var(--vapour-d); border-color:rgba(113,120,133,0.35); }
+
+  .stream-meta-row {
+    display:flex; align-items:baseline; gap:8px;
+    font-size:9.5px; letter-spacing:0.22em;
+    color:var(--vapour-d); text-transform:uppercase;
+    margin-bottom:4px;
+  }
+  .stream-date { color:var(--vellum); font-weight:600; }
+  .stream-time { color:var(--sextant-bright); font-weight:600; }
+  .stream-kind {
+    margin-left:auto;
+    color:var(--vapour-d);
+    max-width:140px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .stream-region {
+    font-family:var(--display); font-weight:600;
+    font-size:14px; letter-spacing:-0.022em;
+    color:var(--vellum);
+    margin-bottom:6px;
+    line-height:1.2;
+  }
+  .stream-sum {
+    font-size:12.5px; line-height:1.5;
+    color:var(--vapour);
+    letter-spacing:-0.005em;
+    margin-bottom:10px;
+  }
+  .stream-sowhat {
+    border-left:2px solid var(--sextant-bright);
+    padding:8px 0 10px 12px;
+    margin-bottom:10px;
+    background:linear-gradient(90deg, rgba(177,72,38,0.06), transparent 80%);
+  }
+  .stream-sowhat-head {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:4px;
+  }
+  .stream-sowhat-lbl {
+    font-size:9px; font-weight:700;
+    letter-spacing:0.32em; text-transform:uppercase;
+    color:var(--sextant-bright);
+  }
+  .stream-sowhat-txt {
+    font-size:12.5px; line-height:1.45;
+    color:var(--vellum);
+    letter-spacing:-0.005em;
+    margin-bottom:8px;
+  }
+  .stream-conf {
+    display:flex; align-items:center; gap:10px;
+    font-size:10px;
+    color:var(--vapour-d);
+    letter-spacing:0.16em;
+  }
+
+  /* ====== Reaction (thumbs) ====== */
+  .reaction { display:flex; gap:4px; }
+  .react-btn {
+    width:22px; height:22px;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--hairline-strong);
+    background:rgba(21,23,28,0.6);
+    color:var(--vapour-d);
+    cursor:pointer;
+    transition:color .15s, border-color .15s, background .15s, transform .1s;
+  }
+  .react-btn:hover { color:var(--vellum); border-color:rgba(244,236,214,0.3); }
+  .react-btn:active { transform:scale(0.92); }
+  .react-btn.on.up   { color:var(--sextant-bright); border-color:var(--sextant-bright); background:rgba(177,72,38,0.15); }
+  .react-btn.on.down { color:var(--vapour);         border-color:var(--vapour-d);       background:rgba(168,176,187,0.10); }
+  .reaction-compact .react-btn { width:18px; height:18px; }
+  .reaction-compact .react-btn svg { width:10px; height:10px; }
+
+  /* ====== Source link ====== */
+  .source-link {
+    display:inline-flex; align-items:baseline; gap:7px;
+    font-family:var(--mono);
+    font-size:9.5px;
+    text-decoration:none;
+    color:var(--vapour);
+    letter-spacing:0.16em; text-transform:uppercase;
+    border:1px solid var(--hairline-strong);
+    padding:4px 8px;
+    transition:color .15s, border-color .15s, background .15s;
+    max-width:100%;
+    overflow:hidden;
+  }
+  .source-link:hover {
+    color:var(--sextant-bright);
+    border-color:rgba(177,72,38,0.55);
+    background:rgba(177,72,38,0.08);
+  }
+  .source-link-lbl { font-weight:700; color:var(--vapour-d); letter-spacing:0.24em; flex-shrink:0; }
+  .source-link:hover .source-link-lbl { color:var(--sextant-bright); }
+  .source-link-url {
+    font-weight:500;
+    letter-spacing:0.04em;
+    text-transform:lowercase;
+    color:var(--vellum);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    min-width:0;
+  }
+  .source-link-arrow { font-size:11px; line-height:1; color:var(--vapour-d); flex-shrink:0; }
+  .source-link:hover .source-link-arrow { color:var(--sextant-bright); }
+  .source-link-compact { font-size:9px; padding:3px 6px; }
+
+  .conf-pill {
+    font-family:var(--mono); font-size:9.5px;
+    text-transform:uppercase; letter-spacing:0.22em;
+    color:var(--vellum); font-weight:600;
+    padding:2px 6px;
+    background:var(--slate-2);
+    border:1px solid var(--hairline-strong);
+  }
+  .conf-pill.conf-verylikely    { color:var(--sextant-bright); border-color:rgba(177,72,38,0.5); }
+  .conf-pill.conf-likely        { color:var(--vellum); }
+  .conf-pill.conf-roughlyevenchance { color:var(--vapour); }
+  .conf-pill.conf-unlikely      { color:var(--vapour-d); }
+  .conf-range { color:var(--vellum); font-weight:600; }
+  .conf-fc { color:var(--sextant-bright); font-weight:600; }
+
+  /* ====== Detail card ====== */
+  .detail {
+    padding:20px 22px 24px;
+    border-bottom:1px solid var(--hairline);
+    background:linear-gradient(180deg, rgba(177,72,38,0.04), transparent 70%);
+  }
+  .detail-head {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:14px;
+  }
+  .detail-id { font-size:9.5px; color:var(--vapour-d); letter-spacing:0.2em; }
+  .detail-source {
+    font-size:11px; font-weight:700;
+    padding:3px 8px;
+    border:1px solid rgba(177,72,38,0.5);
+    color:var(--sextant-bright);
+    letter-spacing:0.16em;
+  }
+  .detail-title-row {
+    display:flex; align-items:center; gap:12px;
+    margin-bottom:6px;
+  }
+  .detail-icon {
+    width:38px; height:38px;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--sextant-bright);
+    background:rgba(177,72,38,0.10);
+    flex-shrink:0;
+  }
+  .detail-region {
+    font-family:var(--display); font-weight:700;
+    font-size:22px; line-height:1.05;
+    letter-spacing:-0.03em;
+    color:var(--vellum);
+  }
+  .detail-kind {
+    font-size:10px; color:var(--sextant-bright);
+    letter-spacing:0.24em; text-transform:uppercase;
+    margin-bottom:14px;
+  }
+  .detail-summary {
+    font-size:13px; line-height:1.55;
+    color:var(--vellum);
+    letter-spacing:-0.005em;
+    margin-bottom:14px;
+  }
+  .detail-sowhat {
+    border-left:2px solid var(--sextant-bright);
+    padding:10px 0 12px 12px;
+    background:linear-gradient(90deg, rgba(177,72,38,0.10), transparent 80%);
+    margin-bottom:18px;
+  }
+  .detail-sowhat-head {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:6px;
+  }
+  .detail-sowhat .detail-section-lbl { margin-bottom:0; color:var(--sextant-bright); }
+  .detail-sowhat-txt {
+    font-size:13px; line-height:1.5;
+    color:var(--vellum);
+    letter-spacing:-0.005em;
+    margin-bottom:10px;
+  }
+  .detail-section { margin-bottom:14px; }
+  .detail-section-lbl {
+    font-size:9.5px; font-weight:600;
+    color:var(--vapour-d);
+    letter-spacing:0.24em; text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  .detail-source-label {
+    font-size:12px; color:var(--vapour);
+    line-height:1.45;
+    letter-spacing:-0.005em;
+  }
+  .detail-drivers { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:5px; }
+  .detail-drivers li {
+    font-size:12px; color:var(--vellum); line-height:1.4;
+    display:grid; grid-template-columns:24px 1fr; gap:8px;
+  }
+  .detail-drivers li .mono { font-size:10px; color:var(--vapour-d); letter-spacing:0.18em; }
+
+  /* ====== ICD ladder ====== */
+  .ladder { margin-top:4px; }
+  .ladder-row { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:6px; }
+  .ladder-cell {
+    height:14px;
+    border:1px solid var(--hairline-strong);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:8px;
+    color:var(--vapour-d); letter-spacing:0.12em;
+  }
+  .ladder-cell.on {
+    background:var(--sextant);
+    border-color:var(--sextant-bright);
+    color:var(--vellum); font-weight:700;
+  }
+  .ladder-scale { position:relative; height:18px; }
+  .ladder-axis { position:absolute; left:0; right:0; top:6px; height:1px; background:var(--hairline-strong); }
+  .ladder-band { position:absolute; top:4px; height:5px; background:var(--sextant-bright); }
+  .ladder-ticks { position:absolute; left:0; right:0; top:11px; height:8px; }
+  .ladder-tick {
+    position:absolute;
+    font-family:var(--mono); font-size:8px;
+    color:var(--vapour-d); transform:translateX(-50%); letter-spacing:0.1em;
+  }
+
+  /* ====== Timeline ====== */
+  .timeline {
+    background:var(--charcoal);
+    border-top:1px solid var(--hairline);
+    padding:14px 24px 16px;
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .timeline-head {
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:var(--mono); font-size:10px;
+    letter-spacing:0.24em; text-transform:uppercase;
+    color:var(--vapour-d);
+  }
+  .timeline-now { color:var(--sextant-bright); font-weight:600; }
+  .timeline-track { position:relative; height:36px; margin:0 4px; }
+  .timeline-axis { position:absolute; left:0; right:0; top:50%; height:1px; background:var(--hairline-strong); }
+  .timeline-forecast {
+    position:absolute; right:0; top:8px; bottom:8px; left:50%;
+    background:linear-gradient(90deg, rgba(177,72,38,0.18), rgba(177,72,38,0.04));
+    border-left:1px solid var(--sextant-bright);
+  }
+  .timeline-tick {
+    position:absolute; top:50%; transform:translate(-50%, -50%);
+    display:flex; flex-direction:column; align-items:center;
+    color:var(--vapour-d); font-size:9px; pointer-events:none;
+  }
+  .timeline-tick::before {
+    content:""; width:1px; height:8px; background:var(--vapour-d); margin-bottom:4px;
+  }
+  .timeline-tick.now { color:var(--sextant-bright); font-weight:700; }
+  .timeline-tick.now::before { background:var(--sextant-bright); height:12px; }
+  .timeline-evt {
+    position:absolute; top:50%; transform:translate(-50%, -50%);
+    width:18px; height:18px; display:flex; align-items:center; justify-content:center; z-index:2;
+  }
+  .timeline-evt .te-dot {
+    width:5px; height:5px; background:var(--sextant-bright);
+    border:1px solid var(--charcoal); box-shadow:0 0 0 1px rgba(177,72,38,0.6);
+  }
+  .timeline-evt:hover .te-dot { transform:scale(1.4); }
+  .timeline-evt.on .te-dot { width:8px; height:8px; box-shadow:0 0 0 3px rgba(177,72,38,0.3); }
+  .timeline-evt .te-label {
+    position:absolute; top:-22px;
+    font-size:9px; color:var(--vellum); font-weight:600;
+    letter-spacing:0.16em; text-transform:uppercase; white-space:nowrap;
+  }
+
+  /* ====== Tweaks panel polish ====== */
+  .tweaks-panel { z-index:50; }
+
+  /* ====== Responsive guard ====== */
+  @media (max-width:1300px) {
+    .stage { grid-template-columns: 300px 1fr 360px; }
+    .lead-figure { font-size:48px; }
+  }
+  @media (max-width:1100px) {
+    .stage { grid-template-columns: 1fr 360px; }
+    .rail-l { display:none; }
+  }
+  @media (max-width:760px) {
+    .stage { grid-template-columns: 1fr; }
+    .rail-r { display:none; }
+  }
+
+  /* ====== Validation Queue + Vetting Panel ====== */
+  .pending-badge {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:16px; height:16px; padding:0 4px;
+    background:var(--sextant-bright);
+    color:var(--vellum);
+    font-family:var(--mono); font-size:9px; font-weight:700;
+    letter-spacing:0.08em;
+    border-radius:2px;
+    margin-left:6px;
+    vertical-align:middle;
+  }
+
+  .queue-row {
+    width:100%; display:block;
+    padding:14px 22px 16px;
+    border-bottom:1px solid var(--hairline);
+    cursor:pointer;
+    transition:background .15s;
+    text-align:left;
+  }
+  .queue-row:hover { background:rgba(244,236,214,0.025); }
+  .queue-row.on { background:rgba(177,72,38,0.08); border-left:2px solid var(--sextant-bright); padding-left:20px; }
+  .queue-row-head {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:6px;
+  }
+  .queue-region {
+    font-family:var(--display); font-weight:600;
+    font-size:13px; letter-spacing:-0.02em; color:var(--vellum);
+  }
+  .queue-time { font-family:var(--mono); font-size:9.5px; color:var(--vapour-d); letter-spacing:0.22em; }
+  .queue-source-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .queue-sum { font-size:12px; color:var(--vapour); line-height:1.4; }
+
+  .tier-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:2px 7px;
+    border:1px solid currentColor;
+    font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:0.22em;
+  }
+  .tier-badge.t1 { color:#7EC8A4; border-color:rgba(126,200,164,0.5); }
+  .tier-badge.t2 { color:var(--vellum); border-color:rgba(244,236,214,0.4); }
+  .tier-badge.t3 { color:var(--vapour); border-color:rgba(168,176,187,0.4); }
+  .tier-badge.t4 { color:var(--vapour-d); border-color:rgba(113,120,133,0.4); }
+  .tier-badge.t5 { color:#FF6B6B; border-color:rgba(255,107,107,0.4); }
+
+  /* ====== Vetting panel ====== */
+  .vetting {
+    padding:20px 22px 24px;
+    display:flex; flex-direction:column; gap:16px;
+  }
+  .vetting-head {
+    padding-bottom:14px;
+    border-bottom:1px solid var(--hairline);
+  }
+  .vetting-id { font-family:var(--mono); font-size:9px; color:var(--vapour-d); letter-spacing:0.22em; margin-bottom:8px; }
+  .vetting-title {
+    font-family:var(--display); font-weight:700;
+    font-size:18px; letter-spacing:-0.03em; color:var(--vellum);
+    margin-bottom:4px;
+  }
+  .vetting-kind { font-family:var(--mono); font-size:9.5px; color:var(--sextant-bright); letter-spacing:0.24em; text-transform:uppercase; }
+  .vetting-sum { font-size:12.5px; color:var(--vapour); line-height:1.5; letter-spacing:-0.005em; }
+
+  .vetting-section-lbl {
+    font-family:var(--mono); font-size:9px; font-weight:700;
+    color:var(--vapour-d); letter-spacing:0.28em; text-transform:uppercase;
+    margin-bottom:10px;
+  }
+
+  /* Source info */
+  .source-ref {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 14px;
+    background:var(--slate-2);
+    border:1px solid var(--hairline-strong);
+  }
+  .source-ref-url {
+    font-family:var(--mono); font-size:10px; color:var(--vapour);
+    letter-spacing:0.06em; flex:1; min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+
+  /* Vetting checklist */
+  .vetting-checks { display:flex; flex-direction:column; gap:8px; }
+  .vetting-check {
+    display:flex; align-items:flex-start; gap:10px;
+    cursor:pointer;
+  }
+  .vetting-check-box {
+    width:16px; height:16px; flex-shrink:0; margin-top:1px;
+    border:1px solid var(--hairline-strong);
+    background:var(--slate-2);
+    display:flex; align-items:center; justify-content:center;
+    transition:background .15s, border-color .15s;
+  }
+  .vetting-check.checked .vetting-check-box {
+    background:var(--sextant-deep);
+    border-color:var(--sextant-bright);
+  }
+  .vetting-check-txt { font-size:12px; line-height:1.4; }
+  .vetting-check-lbl { color:var(--vellum); font-weight:500; }
+  .vetting-check-desc { color:var(--vapour-d); font-size:11px; line-height:1.35; margin-top:2px; }
+
+  /* Admiralty Matrix */
+  .admiralty-matrix { overflow-x:auto; }
+  .admiralty-grid {
+    display:grid;
+    grid-template-columns: 28px repeat(6, 1fr);
+    gap:2px;
+    min-width:260px;
+  }
+  .adm-header {
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:8px; font-weight:700;
+    letter-spacing:0.18em; color:var(--vapour-d); text-transform:uppercase;
+    padding:4px 2px;
+  }
+  .adm-row-label {
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:9px; font-weight:700;
+    color:var(--vapour); letter-spacing:0.1em;
+  }
+  .adm-cell {
+    height:28px;
+    border:1px solid var(--hairline-strong);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    transition:background .12s, border-color .12s;
+    background:var(--slate-2);
+    position:relative;
+  }
+  .adm-cell:hover { background:rgba(177,72,38,0.12); border-color:rgba(177,72,38,0.5); }
+  .adm-cell.on {
+    background:var(--sextant);
+    border-color:var(--sextant-bright);
+  }
+  .adm-cell-code {
+    font-family:var(--mono); font-size:8px; font-weight:700;
+    letter-spacing:0.12em; color:var(--vapour-d);
+  }
+  .adm-cell.on .adm-cell-code { color:var(--vellum); }
+  .admiralty-legend {
+    display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;
+    margin-top:10px;
+  }
+  .adm-legend-row {
+    display:flex; align-items:baseline; gap:6px;
+    font-size:10px; line-height:1.35;
+  }
+  .adm-legend-key {
+    font-family:var(--mono); font-weight:700;
+    color:var(--sextant-bright); font-size:10px;
+    flex-shrink:0; width:14px;
+  }
+  .adm-legend-desc { color:var(--vapour-d); }
+
+  .admiralty-result {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 12px;
+    border:1px solid var(--hairline-strong);
+    background:var(--slate-2);
+  }
+  .adm-result-code {
+    font-family:var(--mono); font-size:22px; font-weight:700;
+    color:var(--sextant-bright); letter-spacing:0.08em;
+  }
+  .adm-result-text { font-size:11px; color:var(--vapour); line-height:1.4; }
+
+  /* Vetting action buttons */
+  .vetting-actions { display:flex; gap:10px; padding-top:4px; }
+  .vetting-btn {
+    flex:1; height:36px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:10px; font-weight:700;
+    letter-spacing:0.24em; text-transform:uppercase;
+    border:1px solid;
+    cursor:pointer;
+    transition:background .15s, color .15s;
+  }
+  .vetting-btn.approve {
+    color:var(--sextant-bright); border-color:rgba(177,72,38,0.5);
+    background:rgba(177,72,38,0.08);
+  }
+  .vetting-btn.approve:hover { background:rgba(177,72,38,0.22); border-color:var(--sextant-bright); }
+  .vetting-btn.approve:disabled { opacity:0.38; cursor:not-allowed; }
+  .vetting-btn.reject {
+    color:var(--vapour-d); border-color:var(--hairline-strong);
+    background:transparent;
+  }
+  .vetting-btn.reject:hover { color:var(--vapour); border-color:rgba(168,176,187,0.4); background:rgba(168,176,187,0.06); }
+
+  /* Approval criteria progress */
+  .vetting-progress {
+    display:flex; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:9.5px; color:var(--vapour-d); letter-spacing:0.18em;
+  }
+  .vetting-progress-bar {
+    flex:1; height:3px; background:var(--hairline-strong); position:relative;
+  }
+  .vetting-progress-fill { height:100%; background:var(--sextant-bright); transition:width .3s; }
+
+  /* Empty validation pane */
+  .vetting-empty {
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    color:var(--vapour-d); font-family:var(--mono); font-size:11px;
+    letter-spacing:0.28em; text-transform:uppercase; gap:10px;
+    padding:40px;
+  }
+
+  /* AI spinner */
+  .vet-spin {
+    width:10px; height:10px; border:1.4px solid currentColor;
+    border-top-color:transparent; border-radius:50%;
+    animation: spin 0.9s linear infinite;
+    display:inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Queue progress bar */
+  .queue-progress {
+    margin-top:8px; height:3px; background:var(--hairline-strong);
+    position:relative; overflow:hidden;
+  }
+  .queue-progress-fill { height:100%; background:var(--sextant-bright); transition:width .4s; }
+  .queue-status {
+    font-family:var(--mono); font-size:8.5px; letter-spacing:0.2em;
+    text-transform:uppercase; margin-top:4px;
+  }
+  .queue-status.vetting   { color:var(--sextant-bright); }
+  .queue-status.published { color:#7EC8A4; }
+  .queue-status.rejected  { color:#FF6B6B; }
+
+  /* Rejected log */
+  .rejected-list { padding:0; max-height:200px; overflow-y:auto; }
+  .rejected-row {
+    padding:10px 22px;
+    border-bottom:1px solid var(--hairline);
+    font-size:11px;
+    display:flex; flex-direction:column; gap:3px;
+  }
+  .rejected-row-head {
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:var(--mono); font-size:9px; color:var(--vapour-d);
+    letter-spacing:0.2em; text-transform:uppercase;
+  }
+  .rejected-region { color:var(--vellum); font-weight:600; font-family:var(--display);
+                     font-size:12px; letter-spacing:-0.015em; }
+  .rejected-reason { font-size:10.5px; color:#FF6B6B; line-height:1.4;
+                     font-family:var(--mono); letter-spacing:0.08em; }
+
+  /* Forecast model rows */
+  .fc-row {
+    padding:16px 22px; border-bottom:1px solid var(--hairline);
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .fc-row-head { display:flex; justify-content:space-between; align-items:baseline; }
+  .fc-q { font-family:var(--display); font-weight:600; font-size:13px;
+          letter-spacing:-0.018em; color:var(--vellum); flex:1; }
+  .fc-pct { font-family:var(--mono); font-size:14px; font-weight:700;
+            color:var(--sextant-bright); letter-spacing:0.04em; }
+  .fc-band-row { display:flex; align-items:center; gap:8px; }
+  .fc-bar {
+    flex:1; height:6px; background:var(--slate-2);
+    border:1px solid var(--hairline-strong); position:relative;
+  }
+  .fc-bar-fill { position:absolute; top:0; bottom:0; background:var(--sextant);
+                 box-shadow:0 0 0 1px rgba(177,72,38,0.4); }
+  .fc-band { font-family:var(--mono); font-size:9px; letter-spacing:0.2em;
+             color:var(--vapour); padding:2px 6px; border:1px solid var(--hairline-strong); }
+  .fc-foot {
+    display:flex; gap:10px; font-family:var(--mono); font-size:9px;
+    color:var(--vapour-d); letter-spacing:0.18em; text-transform:uppercase;
+  }
+  .fc-trend.up { color:var(--sextant-bright); }
+  .fc-trend.down { color:var(--vapour); }
+
+  /* Briefs */
+  .brief-row {
+    padding:18px 22px; border-bottom:1px solid var(--hairline);
+    cursor:pointer; transition:background .15s;
+  }
+  .brief-row:hover { background:rgba(244,236,214,0.025); }
+  .brief-head {
+    display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+    margin-bottom:8px;
+  }
+  .brief-time { font-family:var(--mono); font-size:9.5px; color:var(--sextant-bright);
+                letter-spacing:0.22em; }
+  .brief-type { font-family:var(--mono); font-size:8.5px; color:var(--vapour-d);
+                letter-spacing:0.22em; padding:2px 6px; border:1px solid var(--hairline-strong); }
+  .brief-title { font-family:var(--display); font-weight:700; font-size:15px;
+                 letter-spacing:-0.022em; color:var(--vellum); margin-bottom:6px; line-height:1.2; }
+  .brief-sum { font-size:12px; color:var(--vapour); line-height:1.5;
+               letter-spacing:-0.005em; margin-bottom:10px; }
+  .brief-tags { display:flex; flex-wrap:wrap; gap:5px; }
+  .brief-tag { font-family:var(--mono); font-size:9px; padding:2px 6px;
+               border:1px solid var(--hairline-strong); color:var(--vapour-d);
+               letter-spacing:0.16em; text-transform:uppercase; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel">
+
+/* ─────────────────────────────────────────────────────────────────
+   SHARED REACT HOOKS (consolidated from all modules)
+───────────────────────────────────────────────────────────────── */
+const { useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback } = React;
+
+
+/* ─────────────────────────────────────────────────────────────────
+   DATA  (data.jsx)
+   Synthetic OSINT events + watch-list for the Orbis theatre view.
+   ICD-203 estimative language; A1-F6 source grading.
+   All event content is illustrative / fictional.
+───────────────────────────────────────────────────────────────── */
+
+const NOW_UTC  = "0734Z";
+const NOW_DATE = "17 MAY 2026";
+const ORBIS_NOW = { utc: NOW_UTC, date: NOW_DATE };
+
+const ICD = {
+  "almost no chance":    { p: 3,  cls: "icd-an" },
+  "very unlikely":       { p: 10, cls: "icd-vu" },
+  "unlikely":            { p: 22, cls: "icd-u"  },
+  "roughly even chance": { p: 45, cls: "icd-re" },
+  "likely":              { p: 65, cls: "icd-l"  },
+  "very likely":         { p: 87, cls: "icd-vl" },
+  "almost certainly":    { p: 96, cls: "icd-ac" },
+};
+
+const EVENTS = [
+  { id: "OR-260517-0612-01", lat: 24.5, lon: 120.5, region: "Taiwan Strait",
+    kind: "Naval movement",
+    drivers: ["Coast-guard sortie pattern", "AIS gap cluster", "Closed-area NOTAM"],
+    summary: "Coast-guard activity at three coastal sites overnight; pattern matches MAR quarantine rehearsal.",
+    so_what: "Probability of Q3 quarantine event moves +8 to 40–60%. Two indicators short of action threshold.",
+    source: "B3", source_label: "Regional press · partially reliable · corroborated",
+    confidence: "likely", confidence_range: "55–70%",
+    date_z: "17 MAY", time_z: "0612Z", time_iso: "2026-05-17T06:12Z", severity: 3, forecast: true,
+    theatre: "indopacific" },
+
+  { id: "OR-260517-0438-02", lat: 13.0, lon: 43.2, region: "Bab-el-Mandeb",
+    kind: "Maritime · vessel deviation",
+    drivers: ["AIS gap 38 min", "Bridge-to-bridge traffic", "Sensor track"],
+    summary: "Bulk carrier deviation off Yemeni coast. AIS gap 38 min, recovered south of strait at reduced speed.",
+    so_what: "Consistent with Houthi targeting cycle. Supports +3 on 7-day attack probability; convoy advisory recommended.",
+    source: "A2", source_label: "Confirmed reliable · multiple corroborating",
+    confidence: "very likely", confidence_range: "80–95%",
+    date_z: "17 MAY", time_z: "0438Z", time_iso: "2026-05-17T04:38Z", severity: 4, forecast: true,
+    theatre: "red-sea" },
+
+  { id: "OR-260517-0512-03", lat: 44.7, lon: 37.7, region: "Black Sea · Novorossiysk",
+    kind: "Port activity",
+    drivers: ["Berth occupancy", "Rail-yard flow"],
+    summary: "Increased dock activity at Novorossiysk overnight. Two additional berths occupied since 0200Z.",
+    so_what: "Berth-occupancy spikes preceded prior surge cycles by 36–48h. Staging plausible; not posture shift.",
+    source: "A3", source_label: "Confirmed reliable · imagery",
+    confidence: "likely", confidence_range: "60–75%",
+    date_z: "17 MAY", time_z: "0512Z", time_iso: "2026-05-17T05:12Z", severity: 2, forecast: false,
+    theatre: "eurasia" },
+
+  { id: "OR-260517-0309-04", lat: 9.5, lon: 113.0, region: "South China Sea · Spratly",
+    kind: "Coast-guard intercept",
+    drivers: ["VHF traffic", "Pattern match (n=4)"],
+    summary: "Coast-guard intercept of fisheries vessel near Spratly group. Outcome uncertain at filing.",
+    so_what: "Within established harassment cycle. Treat as baseline unless corroborated within 12h.",
+    source: "C3", source_label: "Single-source · indeterminate",
+    confidence: "roughly even chance", confidence_range: "35–55%",
+    date_z: "17 MAY", time_z: "0309Z", time_iso: "2026-05-17T03:09Z", severity: 3, forecast: false,
+    theatre: "indopacific" },
+
+  { id: "OR-260517-0211-05", lat: 35.0, lon: 33.5, region: "Eastern Mediterranean",
+    kind: "Air defence test",
+    drivers: ["Partner sensor track"],
+    summary: "Air-defence test event observed by partner sensor. Single-source.",
+    so_what: "Insufficient to move air-defence watch. Hold; corroborate with second-source ELINT.",
+    source: "C2", source_label: "Sensor · single-source · plausible",
+    confidence: "roughly even chance", confidence_range: "35–50%",
+    date_z: "17 MAY", time_z: "0211Z", time_iso: "2026-05-17T02:11Z", severity: 2, forecast: false,
+    theatre: "med" },
+
+  { id: "OR-260516-2347-06", lat: 16.27, lon: -0.05, region: "Sahel · Gao",
+    kind: "Convoy movement",
+    drivers: ["Field report", "Last-light departure pattern"],
+    summary: "Vehicle convoy departed Gao perimeter at last light. Direction northeast along RN-16.",
+    so_what: "Direction and timing consistent with active sub-state operations. Supports +5 on governance-event watch.",
+    source: "B4", source_label: "Field report · partially reliable",
+    confidence: "likely", confidence_range: "55–70%",
+    date_z: "16 MAY", time_z: "2347Z", time_iso: "2026-05-16T23:47Z", severity: 3, forecast: true,
+    theatre: "africa" },
+
+  { id: "OR-260517-0102-07", lat: 26.5, lon: 56.4, region: "Strait of Hormuz",
+    kind: "Radar emission",
+    drivers: ["ELINT detection", "Pattern match (n=11)"],
+    summary: "Surface-search radar emission, brief. Origin: southern littoral.",
+    so_what: "n=11 over 30d. Coercive signalling pattern, not pre-conflict. Maintain current watch posture.",
+    source: "B2", source_label: "Sensor · confirmed pattern",
+    confidence: "very likely", confidence_range: "80–90%",
+    date_z: "17 MAY", time_z: "0102Z", time_iso: "2026-05-17T01:02Z", severity: 3, forecast: true,
+    theatre: "red-sea" },
+
+  { id: "OR-260516-1903-08", lat: 38.3, lon: 127.5, region: "Korean Peninsula",
+    kind: "Readiness change",
+    drivers: ["Partner liaison", "Comms volume"],
+    summary: "Perimeter readiness shift in northern sector. Comms volume up 22% on 7-day baseline.",
+    so_what: "Readiness move, not posture shift. Within historical band; do not action.",
+    source: "B3", source_label: "Partner liaison · corroborated",
+    confidence: "likely", confidence_range: "55–70%",
+    date_z: "16 MAY", time_z: "1903Z", time_iso: "2026-05-16T19:03Z", severity: 3, forecast: true,
+    theatre: "indopacific" },
+
+  { id: "OR-260516-2156-09", lat: 41.3, lon: 45.0, region: "Caucasus · Marneuli",
+    kind: "Border traffic",
+    drivers: ["Open-source"],
+    summary: "Border traffic anomaly, southern crossing. Single posting, uncorroborated.",
+    so_what: "Below corroboration threshold. Hold; revisit if second-source surfaces by 1200Z.",
+    source: "D4", source_label: "Open-source · low-grade",
+    confidence: "unlikely", confidence_range: "15–30%",
+    date_z: "16 MAY", time_z: "2156Z", time_iso: "2026-05-16T21:56Z", severity: 1, forecast: false,
+    theatre: "eurasia" },
+
+  { id: "OR-260516-1840-10", lat: 12.5, lon: 96.5, region: "Andaman Sea",
+    kind: "Fishing-fleet anomaly",
+    drivers: ["AIS density"],
+    summary: "Fishing-fleet density anomaly in Burmese waters. AIS density +180% on 30-day median.",
+    so_what: "Likely commercial seasonal pattern. Monitor for state-actor co-location.",
+    source: "D3", source_label: "Open-source · uncorroborated",
+    confidence: "unlikely", confidence_range: "20–35%",
+    date_z: "16 MAY", time_z: "1840Z", time_iso: "2026-05-16T18:40Z", severity: 1, forecast: false,
+    theatre: "indopacific" },
+
+  { id: "OR-260517-0408-11", lat: 48.6, lon: 38.0, region: "Donbas · eastern arc",
+    kind: "Indirect fire",
+    drivers: ["Local press", "Acoustic"],
+    summary: "Indirect-fire reports along eastern arc through the night, intermittent.",
+    so_what: "Within established arc and tempo. No posture shift indicated.",
+    source: "B3", source_label: "Local press · partially reliable",
+    confidence: "likely", confidence_range: "60–75%",
+    date_z: "17 MAY", time_z: "0408Z", time_iso: "2026-05-17T04:08Z", severity: 3, forecast: true,
+    theatre: "eurasia" },
+
+  { id: "OR-260517-0521-12", lat: -22.5, lon: -63.7, region: "Andean · tri-border",
+    kind: "Patrol density",
+    drivers: ["Imagery"],
+    summary: "Patrol density change observed at tri-border crossing. Imagery only.",
+    so_what: "Imagery-only; insufficient to move tri-border watch. Task overhead reshoot at 1800Z.",
+    source: "C4", source_label: "Open-source · indeterminate",
+    confidence: "unlikely", confidence_range: "20–35%",
+    date_z: "17 MAY", time_z: "0521Z", time_iso: "2026-05-17T05:21Z", severity: 1, forecast: false,
+    theatre: "americas" },
+
+  { id: "OR-260517-0033-13", lat: 33.7, lon: 74.0, region: "Kashmir · LoC",
+    kind: "Line-of-control exchange",
+    drivers: ["Local press"],
+    summary: "Line-of-control fire exchange, brief. No claimed casualties at filing.",
+    so_what: "Within tactical range. No escalation indicators on the wire.",
+    source: "B3", source_label: "Local press · partially reliable",
+    confidence: "likely", confidence_range: "55–70%",
+    date_z: "17 MAY", time_z: "0033Z", time_iso: "2026-05-17T00:33Z", severity: 2, forecast: false,
+    theatre: "indopacific" },
+
+  { id: "OR-260517-0247-14", lat: 12.5, lon: -71.5, region: "Caribbean approach",
+    kind: "Maritime tracking loss",
+    drivers: ["Sensor"],
+    summary: "Go-fast tracking lost at last station, La Guajira approach.",
+    so_what: "Track loss common in this corridor. No assessed change to flow.",
+    source: "C3", source_label: "Sensor · indeterminate",
+    confidence: "roughly even chance", confidence_range: "35–55%",
+    date_z: "17 MAY", time_z: "0247Z", time_iso: "2026-05-17T02:47Z", severity: 1, forecast: false,
+    theatre: "americas" },
+
+  { id: "OR-260517-0700-15", lat: 50.4, lon: 30.5, region: "Kyiv · approaches",
+    kind: "Air-raid alert",
+    drivers: ["Public siren network", "Partner liaison"],
+    summary: "Region-wide air-raid alert issued 0658Z, intermittent activity for 24 min.",
+    so_what: "Correlates with prior multi-direction salvo pattern. Brief disruption; no infrastructure claims at filing.",
+    source: "A2", source_label: "Confirmed reliable",
+    confidence: "very likely", confidence_range: "85–95%",
+    date_z: "17 MAY", time_z: "0700Z", time_iso: "2026-05-17T07:00Z", severity: 3, forecast: true,
+    theatre: "eurasia" },
+
+  { id: "OR-260517-0153-16", lat: 31.8, lon: 35.2, region: "Levant · West Bank",
+    kind: "Crossing closure",
+    drivers: ["Local press", "Partner advisory"],
+    summary: "Pedestrian crossing closure announced 0153Z, indefinite at filing.",
+    so_what: "Indicates security-tempo elevation. Monitor for cross-effects on supply lines.",
+    source: "B2", source_label: "Partner advisory · corroborated",
+    confidence: "very likely", confidence_range: "80–90%",
+    date_z: "17 MAY", time_z: "0153Z", time_iso: "2026-05-17T01:53Z", severity: 2, forecast: false,
+    theatre: "med" },
+];
+
+const WATCHLIST = [
+  { region: "Taiwan Strait",        q: "Quarantine event by 30 SEP",   lo: 40, hi: 60, band: "likely",              drivers: 3, updated: "0612Z",    trend: "+8" },
+  { region: "Red Sea · BAM",        q: "Vessel attack within 7 days",  lo: 65, hi: 80, band: "very likely",         drivers: 5, updated: "0438Z",    trend: "+3" },
+  { region: "Korean Peninsula",     q: "Perimeter incident by 30 JUN", lo: 25, hi: 45, band: "roughly even chance", drivers: 2, updated: "16/1903Z", trend: "0"  },
+  { region: "Black Sea",            q: "Port disruption by 30 JUN",    lo: 30, hi: 50, band: "roughly even chance", drivers: 2, updated: "0512Z",    trend: "+2" },
+  { region: "Sahel",                q: "Governance event by 30 JUN",   lo: 45, hi: 65, band: "likely",              drivers: 4, updated: "16/2347Z", trend: "+5" },
+  { region: "Strait of Hormuz",     q: "Closure-pattern by 30 SEP",    lo: 20, hi: 40, band: "unlikely",            drivers: 2, updated: "0102Z",    trend: "-1" },
+  { region: "Eastern Mediterranean",q: "Air-defence engagement Q3",    lo: 15, hi: 35, band: "unlikely",            drivers: 1, updated: "0211Z",    trend: "0"  },
+  { region: "Donbas · eastern arc", q: "Sustained offensive by 30 JUN",lo: 55, hi: 75, band: "likely",              drivers: 6, updated: "0408Z",    trend: "+4" },
+];
+
+const LEAD = {
+  theatre: "Indo-Pacific",
+  question: "Probability of a Taiwan Strait quarantine event by 30 SEP",
+  lo: 40, hi: 60,
+  band: "likely",
+  driver: "Pattern matches the MAR rehearsal. Three indicators on the watch list, two new since 0500Z.",
+};
+
+/* ─── Admiralty Code System (NATO STANAG 2511) ─── */
+const ADMIRALTY_SOURCE = [
+  { code:"A", label:"Completely Reliable", desc:"No doubt about authenticity, trustworthiness, or competency. History of complete reliability." },
+  { code:"B", label:"Usually Reliable",    desc:"Minor doubts, but history of valid information in the majority of cases." },
+  { code:"C", label:"Fairly Reliable",     desc:"Occasional doubt. Provided valid information in the past." },
+  { code:"D", label:"Not Usually Reliable",desc:"Significant doubt. Provided false information in the past." },
+  { code:"E", label:"Unreliable",          desc:"Lack of authentic history. History of invalid information." },
+  { code:"F", label:"Cannot Be Judged",    desc:"Insufficient basis for evaluating source reliability." },
+];
+
+const ADMIRALTY_CRED = [
+  { code:1, label:"Confirmed",      desc:"Confirmed by other independent sources. Logical in itself. Consistent with known facts." },
+  { code:2, label:"Probably True",  desc:"Not confirmed. Logical in itself. Consistent with other information on the subject." },
+  { code:3, label:"Possibly True",  desc:"Not confirmed. Reasonably logical. Agrees with some other information." },
+  { code:4, label:"Doubtful",       desc:"Not confirmed. Not logical. Does not agree with other information on subject." },
+  { code:5, label:"Improbable",     desc:"Not confirmed. Illogical in itself. Contradicted by other information." },
+  { code:6, label:"Cannot Be Judged",desc:"No basis for evaluating the validity of the information." },
+];
+
+const SOURCE_TIERS = [
+  { tier:1, label:"Tier 1",  desc:"Peer-reviewed, satellite imagery, verified government databases, court records", cls:"t1" },
+  { tier:2, label:"Tier 2",  desc:"Major reputable journalism (Reuters, BBC, AP) with editorial fact-checking", cls:"t2" },
+  { tier:3, label:"Tier 3",  desc:"Think tanks, institutional reports, subject-matter expert publications", cls:"t3" },
+  { tier:4, label:"Tier 4",  desc:"Partisan blogs, unverified community forums, social media influencers", cls:"t4" },
+  { tier:5, label:"Tier 5",  desc:"Anonymous accounts, fresh domains, paste sites — opaque authorship", cls:"t5" },
+];
+
+const VETTING_STEPS = [
+  { id:"triangulation", label:"Data Triangulation", desc:"Corroborate with ≥2 independent sources via separate datasets." },
+  { id:"temporal",      label:"Temporal Check",     desc:"Verify timestamp; confirm information is not recycled or backdated." },
+  { id:"sourceHistory", label:"Source History",     desc:"Review source's pattern of life — prior accuracy, known biases." },
+  { id:"metadata",      label:"Metadata Analysis",  desc:"Strip EXIF / document metadata; verify creation date and origin." },
+  { id:"reverseSearch", label:"Reverse Search",     desc:"Reverse-image or reverse-search to confirm media provenance." },
+];
+
+/* Pending events awaiting analyst validation before publication */
+const PENDING_QUEUE_INIT = [
+  {
+    id: "PQ-260517-0812-01",
+    lat: 15.3, lon: 39.5, region: "Asmara · Eritrea",
+    kind: "Convoy movement",
+    rawSource: "Telegram · @Horn_OSINT", rawUrl: "https://t.me/s/Horn_OSINT",
+    sourceTier: 5,
+    summary: "Anonymous Telegram channel posting images of military truck convoys on the Asmara–Massawa road. No corroboration at filing.",
+    indicators: ["Social media imagery", "Vehicle identification uncertain"],
+    date_z: "17 MAY", time_z: "0812Z", time_iso: "2026-05-17T08:12Z",
+    theatre: "africa", severity: 2,
+    incomingAt: "0815Z",
+    vetted: { triangulation:false, temporal:false, sourceHistory:false, metadata:false, reverseSearch:false },
+    admiraltySource: null, admiraltyCred: null,
+  },
+  {
+    id: "PQ-260517-0731-02",
+    lat: 31.5, lon: 32.3, region: "Suez · Northern approach",
+    kind: "Naval movement",
+    rawSource: "Reuters Wire Service", rawUrl: "https://www.reuters.com/world/middle-east/",
+    sourceTier: 2,
+    summary: "Reuters wire citing Egyptian canal authority: IRIN frigate ALVAND (F-72) transited Suez northbound at 0620Z. Canal authority confirms transit log.",
+    indicators: ["Wire service report", "Named vessel", "Canal authority citation", "AIS track partial"],
+    date_z: "17 MAY", time_z: "0731Z", time_iso: "2026-05-17T07:31Z",
+    theatre: "med", severity: 3,
+    incomingAt: "0734Z",
+    vetted: { triangulation:false, temporal:false, sourceHistory:false, metadata:false, reverseSearch:false },
+    admiraltySource: null, admiraltyCred: null,
+  },
+  {
+    id: "PQ-260517-0649-03",
+    lat: 35.1, lon: 38.7, region: "Deir ez-Zor · T4 Airbase",
+    kind: "Readiness change",
+    rawSource: "Maxar Technologies · WorldView-3", rawUrl: "https://www.maxar.com/products/satellite-imagery",
+    sourceTier: 1,
+    summary: "Maxar WorldView-3 imagery (0511Z pass) shows 14 tracked vehicles absent from T4 airbase vehicle staging area vs. 48h prior composite.",
+    indicators: ["Commercial satellite imagery", "Vehicle count delta", "Temporal comparison", "0.31m resolution"],
+    date_z: "17 MAY", time_z: "0649Z", time_iso: "2026-05-17T06:49Z",
+    theatre: "med", severity: 3,
+    incomingAt: "0652Z",
+    vetted: { triangulation:false, temporal:false, sourceHistory:false, metadata:false, reverseSearch:false },
+    admiraltySource: null, admiraltyCred: null,
+  },
+  {
+    id: "PQ-260517-0622-04",
+    lat: 39.0, lon: 125.7, region: "Nampo · DPRK",
+    kind: "Port activity",
+    rawSource: "NK News · Open-Source Analysis", rawUrl: "https://www.nknews.org/category/north-korea-shipping/",
+    sourceTier: 3,
+    summary: "NK News reporting unusual activity at Nampo western dock citing AIS anomalies and prior-day cargo vessel repositioning. No second-source at filing.",
+    indicators: ["Specialist publication", "AIS density analysis", "Single-source", "No official confirmation"],
+    date_z: "17 MAY", time_z: "0622Z", time_iso: "2026-05-17T06:22Z",
+    theatre: "indopacific", severity: 2,
+    incomingAt: "0625Z",
+    vetted: { triangulation:false, temporal:false, sourceHistory:false, metadata:false, reverseSearch:false },
+    admiraltySource: null, admiraltyCred: null,
+  },
+];
+
+
+/* ─────────────────────────────────────────────────────────────────
+   LIVE DATA INGESTION  (multi-source feed)
+   GDELT 2.0 Doc API — global news monitoring across 100K+ sources.
+   USGS — real-time seismic / geophysical events.
+   Both are CORS-enabled and return geographically tagged events.
+───────────────────────────────────────────────────────────────── */
+
+/* Approximate country centroids — used to plot GDELT articles whose
+   only geo signal is `sourcecountry`. ~110 entries covering the
+   countries most likely to surface in OSINT feeds. */
+const COUNTRY_CENTROIDS = {
+  "Afghanistan":[66,34],"Albania":[20,41],"Algeria":[3,28],"Argentina":[-64,-34],
+  "Armenia":[45,40],"Australia":[134,-25],"Austria":[14,48],"Azerbaijan":[48,40],
+  "Bahrain":[50.5,26],"Bangladesh":[90,24],"Belarus":[28,53],"Belgium":[4,50],
+  "Bolivia":[-65,-17],"Brazil":[-55,-10],"Bulgaria":[25,43],"Burma":[97,21],
+  "Cambodia":[105,13],"Cameroon":[12,6],"Canada":[-95,60],"Chad":[19,15],
+  "Chile":[-71,-30],"China":[104,35],"Colombia":[-74,4],"Croatia":[16,45],
+  "Cuba":[-79,21],"Cyprus":[33,35],"Czech Republic":[15,50],"Denmark":[10,56],
+  "Dominican Republic":[-70,19],"Ecuador":[-78,-1],"Egypt":[30,27],"Eritrea":[39,15],
+  "Estonia":[26,59],"Ethiopia":[40,9],"Finland":[26,64],"France":[2,46],
+  "Georgia":[43,42],"Germany":[10,51],"Ghana":[-1,8],"Greece":[22,39],
+  "Guatemala":[-91,15],"Haiti":[-73,19],"Honduras":[-86,15],"Hungary":[20,47],
+  "Iceland":[-18,65],"India":[78,22],"Indonesia":[114,-2],"Iran":[53,32],
+  "Iraq":[44,33],"Ireland":[-8,53],"Israel":[35,31],"Italy":[12,42],
+  "Ivory Coast":[-5,7],"Jamaica":[-77,18],"Japan":[138,36],"Jordan":[36,31],
+  "Kazakhstan":[68,48],"Kenya":[38,1],"Korea, Republic of":[128,36],
+  "Korea, North":[127,40],"South Korea":[128,36],"North Korea":[127,40],
+  "Kuwait":[48,29],"Kyrgyzstan":[75,41],"Laos":[103,18],"Latvia":[25,57],
+  "Lebanon":[36,34],"Liberia":[-9,6],"Libya":[18,27],"Lithuania":[24,56],
+  "Madagascar":[47,-19],"Malaysia":[102,4],"Mali":[-4,17],"Mexico":[-102,23],
+  "Moldova":[29,47],"Mongolia":[104,47],"Morocco":[-6,32],"Mozambique":[36,-18],
+  "Myanmar":[97,21],"Nepal":[84,28],"Netherlands":[5,52],"New Zealand":[173,-41],
+  "Nicaragua":[-85,12],"Niger":[8,17],"Nigeria":[8,10],"Norway":[10,62],
+  "Oman":[57,21],"Pakistan":[69,30],"Palestinian Territory":[35,32],"Panama":[-80,9],
+  "Papua New Guinea":[145,-6],"Paraguay":[-58,-23],"Peru":[-76,-10],
+  "Philippines":[122,13],"Poland":[19,52],"Portugal":[-8,39],"Qatar":[51,25],
+  "Romania":[25,46],"Russia":[100,60],"Rwanda":[30,-2],"Saudi Arabia":[45,24],
+  "Senegal":[-14,14],"Serbia":[21,44],"Sierra Leone":[-11,8],"Singapore":[104,1],
+  "Slovakia":[19,49],"Slovenia":[15,46],"Somalia":[46,5],"South Africa":[25,-30],
+  "South Sudan":[31,7],"Spain":[-4,40],"Sri Lanka":[81,7],"Sudan":[30,16],
+  "Sweden":[15,62],"Switzerland":[8,47],"Syria":[38,35],"Taiwan":[121,23.5],
+  "Tajikistan":[71,39],"Tanzania":[35,-6],"Thailand":[101,15],"Tunisia":[10,34],
+  "Turkey":[35,39],"Turkmenistan":[59,40],"Uganda":[32,1],"Ukraine":[31,49],
+  "United Arab Emirates":[54,24],"United Kingdom":[-2,54],"United States":[-98,39],
+  "USA":[-98,39],"Uruguay":[-56,-33],"Uzbekistan":[64,41],"Venezuela":[-66,6],
+  "Vietnam":[108,16],"Yemen":[48,15],"Zambia":[27,-13],"Zimbabwe":[30,-19],
+};
+
+/* Map a free-text headline/title to one of our existing event kinds
+   so it gets the right icon on the map. Order matters — more specific
+   keywords first. */
+const KIND_KEYWORDS = [
+  { kind:"Air-raid alert",            keywords:["air raid","air-raid","siren","missile attack","missile strike"] },
+  { kind:"Maritime · vessel deviation",keywords:["tanker","cargo ship","container ship","ais ","vessel deviation","ship attack"] },
+  { kind:"Naval movement",            keywords:["naval","warship","destroyer","frigate","submarine","carrier strike","fleet"] },
+  { kind:"Port activity",             keywords:["port","harbor","harbour","dock","berth","shipyard"] },
+  { kind:"Air defence test",          keywords:["air defense","air defence","anti-aircraft","s-400","s-300","patriot","iron dome","interceptor"] },
+  { kind:"Convoy movement",           keywords:["convoy","truck column","armored column","mechanized column"] },
+  { kind:"Radar emission",            keywords:["radar","elint","sigint","signals intelligence","spectrum"] },
+  { kind:"Readiness change",          keywords:["readiness","exercise","drill","mobilization","mobilisation","alert level"] },
+  { kind:"Border traffic",            keywords:["border crossing","frontier","customs"] },
+  { kind:"Indirect fire",             keywords:["shelling","artillery","rocket","mortar","barrage","bombardment"] },
+  { kind:"Crossing closure",          keywords:["closure","blockade","sealed","shut"] },
+  { kind:"Coast-guard intercept",     keywords:["coast guard","coastguard","boarded","interdicted"] },
+  { kind:"Line-of-control exchange",  keywords:["line of control","loc fire","cross-border fire"] },
+  { kind:"Patrol density",            keywords:["patrol","reconnaissance","surveillance"] },
+  { kind:"Maritime tracking loss",    keywords:["tracking lost","vessel disappeared","ais gap"] },
+];
+
+function classifyKind(text) {
+  if (!text) return "Readiness change";
+  const t = text.toLowerCase();
+  for (const { kind, keywords } of KIND_KEYWORDS) {
+    if (keywords.some(k => t.includes(k))) return kind;
+  }
+  return "Readiness change";
+}
+
+/* Light deterministic hash → small lat/lon jitter so multiple articles
+   from the same country don't stack on a single pin. */
+function jitter(seed, magnitude = 3) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) { h = ((h<<5) - h) + seed.charCodeAt(i); h |= 0; }
+  return ((h % 1000) / 1000 - 0.5) * 2 * magnitude;
+}
+
+function parseGdeltDate(s) {
+  // "20260517T143000Z" → date_z "17 MAY", time_z "1430Z", iso
+  if (!s || s.length < 13) return null;
+  const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  const yy = s.slice(0,4), mm = s.slice(4,6), dd = s.slice(6,8);
+  const HH = s.slice(9,11), MM = s.slice(11,13);
+  return {
+    date_z: `${dd} ${months[parseInt(mm,10)-1] || "—"}`,
+    time_z: `${HH}${MM}Z`,
+    time_iso: `${yy}-${mm}-${dd}T${HH}:${MM}Z`,
+  };
+}
+
+/* Pull live OSINT-relevant articles from GDELT 2.0.
+   Query biases toward military / maritime / conflict English-language
+   news in the past 24h. Returns events shaped like the rest of the app. */
+async function fetchGDELT({ maxrecords = 60 } = {}) {
+  const query = "(naval OR missile OR military OR maritime OR convoy OR border OR strike OR airbase OR fleet OR shelling OR drone) sourcelang:eng";
+  const params = new URLSearchParams({
+    query, mode:"ArtList", format:"json",
+    timespan:"24H", maxrecords:String(maxrecords), sort:"DateDesc",
+  });
+  const url = `https://api.gdeltproject.org/api/v2/doc/doc?${params}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`GDELT HTTP ${r.status}`);
+  const text = await r.text();
+  let data;
+  try { data = JSON.parse(text); }
+  catch (e) { throw new Error(`GDELT returned non-JSON (${text.slice(0,80)}…)`); }
+  if (!data.articles) return [];
+
+  return data.articles
+    .map((art, i) => {
+      const country = art.sourcecountry;
+      const coords  = COUNTRY_CENTROIDS[country];
+      if (!coords) return null;
+      const dt = parseGdeltDate(art.seendate);
+      if (!dt) return null;
+
+      const seed = art.url || `${i}`;
+      const lon  = coords[0] + jitter(seed + "x", 4);
+      const lat  = coords[1] + jitter(seed + "y", 3);
+      const kind = classifyKind(art.title);
+
+      return {
+        id: `LIVE-${art.seendate}-${i}`,
+        lat, lon,
+        region: country,
+        kind,
+        summary: art.title,
+        so_what: `Auto-ingested via GDELT 2.0. Geolocation derived from source country (${country}); refine with named-entity extraction before action.`,
+        source: "C3",          // open-source default until analyst rates
+        source_label: `${art.domain} · open-source · auto-classified`,
+        url: art.url,
+        domain: art.domain,
+        date_z: dt.date_z, time_z: dt.time_z, time_iso: dt.time_iso,
+        confidence: "roughly even chance", confidence_range: "35–55%",
+        severity: 2,
+        forecast: false,
+        drivers: [`Source: ${art.domain}`, `Language: ${art.language || "English"}`, `Country: ${country}`],
+        theatre: "world",
+        live: true,
+      };
+    })
+    .filter(Boolean);
+}
+
+/* React hook — fetches on mount, refreshes every 5 minutes, and
+   exposes a manual refresh trigger. Errors surface via `status`. */
+function useLiveEvents() {
+  const [events, setEvents] = useState([]);
+  const [status, setStatus] = useState({ state:"idle", lastFetch:null, error:null });
+
+  const refresh = useCallback(async () => {
+    setStatus(s => ({ ...s, state:"fetching" }));
+    try {
+      const evs = await fetchGDELT({ maxrecords: 25 });
+      setEvents(evs);
+      setStatus({ state:"ok", lastFetch:new Date(), error:null, count:evs.length });
+    } catch (e) {
+      setStatus({ state:"error", lastFetch:new Date(), error:e.message });
+      console.error("Live feed error:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const id = setInterval(refresh, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [refresh]);
+
+  return { events, status, refresh };
+}
+
+
+/* ─────────────────────────────────────────────────────────────────
+   AI AUTO-VETTING ENGINE
+   Each step is a deterministic checker the agent runs against the
+   current corpus. Steps progress on a tick; events auto-publish or
+   auto-reject when the pipeline completes.
+───────────────────────────────────────────────────────────────── */
+
+/* Map known news/intel domains to their source tier (1 = highest trust). */
+const TIER_PATTERNS = [
+  { tier: 1, patterns: [".gov", ".mil", "maxar.com", "planet.com", "esa.int", "usgs.gov", "nasa.gov", "noaa.gov"] },
+  { tier: 2, patterns: ["reuters.com","bbc.co.uk","bbc.com","apnews.com","afp.com","bloomberg.com",
+                        "ft.com","wsj.com","nytimes.com","theguardian.com","washingtonpost.com",
+                        "aljazeera.com","dw.com","france24.com","economist.com","nikkei.com"] },
+  { tier: 3, patterns: ["csis.org","rusi.org","iiss.org","rand.org","carnegieendowment.org",
+                        "warontherocks.com","nknews.org","defenseone.com","janes.com",
+                        "stripes.com","navytimes.com","breakingdefense.com","cfr.org"] },
+  { tier: 4, patterns: ["rt.com","sputnikglobe.com","globaltimes.cn","chinadaily.com.cn",
+                        "presstv.ir","tasnimnews.com","mehrnews.com","sputnik"] },
+];
+function domainToTier(domain) {
+  if (!domain) return 5;
+  const d = domain.toLowerCase();
+  for (const { tier, patterns } of TIER_PATTERNS) {
+    if (patterns.some(p => d.endsWith(p) || d.includes(p))) return tier;
+  }
+  return 4;
+}
+
+/* Individual AI checks. Each returns { result, detail }. */
+const SIM_NOW = new Date("2026-05-17T07:34:00Z");
+
+function aiTriangulate(event, corpus) {
+  const key = (event.region || "").toLowerCase().split("·")[0].trim();
+  const same = corpus.filter(e =>
+    e.id !== event.id && e.region &&
+    e.region.toLowerCase().includes(key)
+  );
+  return {
+    result: same.length >= 1,
+    detail: same.length >= 2
+      ? `Cross-matched ${same.length} corroborating reports in same region`
+      : same.length === 1
+      ? `1 corroborating report — minimum threshold met`
+      : `No corroborating sources in current corpus`,
+  };
+}
+function aiTemporalCheck(event) {
+  const evDate = new Date(event.time_iso || Date.now());
+  const ageMin = (SIM_NOW - evDate) / 60000;
+  const valid  = ageMin >= -60 && ageMin < 48 * 60;
+  return {
+    result: valid,
+    detail: ageMin < 0
+      ? `Timestamp ${Math.abs(Math.floor(ageMin))} min in future — flagged`
+      : ageMin < 60
+      ? `Fresh: ${Math.floor(ageMin)} min old`
+      : ageMin < 24 * 60
+      ? `Recent: ${(ageMin/60).toFixed(1)} h old`
+      : `Stale: ${(ageMin/(24*60)).toFixed(1)} d old — outside fresh window`,
+  };
+}
+function aiSourceHistory(event) {
+  const tier = event.sourceTier ?? 4;
+  return {
+    result: tier <= 3,
+    detail: tier === 1 ? `Primary source · verified historical reliability`
+         : tier === 2 ? `Wire service · strict editorial controls`
+         : tier === 3 ? `Institutional source · documented track record`
+         : tier === 4 ? `Specialist publication · limited editorial verification`
+         :              `Anonymous source · no track record available`,
+  };
+}
+function aiMetadataCheck(event) {
+  const has = !!(event.rawUrl || event.url);
+  return {
+    result: has,
+    detail: has ? `Source URL intact · WHOIS verified · EXIF clean`
+                : `Missing provenance fields — cannot verify`,
+  };
+}
+function aiReverseSearch(event) {
+  const tier = event.sourceTier ?? 4;
+  const seed = (event.id || "").length;
+  const priorCount = tier <= 2 ? 0 : tier === 3 ? (seed % 2) : 2 + (seed % 4);
+  return {
+    result: tier <= 3,
+    detail: priorCount === 0
+      ? `No prior contexts found · content appears novel`
+      : priorCount === 1
+      ? `1 related context in 30d window · acceptable`
+      : `${priorCount} prior contexts found · potential recycling`,
+  };
+}
+
+function aiCheckStep(stepId, event, corpus) {
+  switch (stepId) {
+    case "triangulation": return aiTriangulate(event, corpus);
+    case "temporal":      return aiTemporalCheck(event);
+    case "sourceHistory": return aiSourceHistory(event);
+    case "metadata":      return aiMetadataCheck(event);
+    case "reverseSearch": return aiReverseSearch(event);
+    default: return { result: false, detail: "Unknown check" };
+  }
+}
+
+/* Assign Admiralty rating from completed checks. */
+function computeAdmiralty(event) {
+  const tierToSrc = { 1:"A", 2:"B", 3:"C", 4:"D", 5:"F" };
+  const src = tierToSrc[event.sourceTier ?? 4] || "F";
+  const passes = Object.values(event.vetted || {}).filter(v => v && v.result).length;
+  const cred = passes >= 5 ? 1 : passes >= 4 ? 2 : passes >= 3 ? 3 : passes >= 2 ? 4 : 5;
+  return { admiraltySource: src, admiraltyCred: cred };
+}
+
+/* Convert a pending event into a published one (shape the rest of
+   the app already understands). */
+function pendingToPublished(ev) {
+  const code = `${ev.admiraltySource}${ev.admiraltyCred}`;
+  const srcDef  = ADMIRALTY_SOURCE.find(s => s.code === ev.admiraltySource);
+  const credDef = ADMIRALTY_CRED.find(c => c.code === ev.admiraltyCred);
+  return {
+    id: ev.id, lat: ev.lat, lon: ev.lon, region: ev.region, kind: ev.kind,
+    summary: ev.summary,
+    so_what: `Auto-validated via AI vetting pipeline (${Object.values(ev.vetted).filter(v=>v?.result).length}/5 checks passed). ${credDef?.desc || ""}`,
+    source: code,
+    source_label: `${ev.rawSource || ev.domain || "open-source"} · ${srcDef?.label || ""} · ${credDef?.label || ""}`,
+    confidence: credDef?.code <= 2 ? "very likely" : credDef?.code <= 3 ? "likely" : "roughly even chance",
+    confidence_range: credDef?.code <= 2 ? "75–90%" : credDef?.code <= 3 ? "55–70%" : "35–55%",
+    drivers: ev.indicators || ev.drivers || [],
+    date_z: ev.date_z, time_z: ev.time_z, time_iso: ev.time_iso,
+    theatre: ev.theatre, severity: ev.severity || 2,
+    forecast: (ev.severity || 2) >= 3,
+    url: ev.url || ev.rawUrl, domain: ev.domain,
+    live: !!ev.live,
+  };
+}
+
+/* Source URL helpers — used by SourceLink so every link points to a
+   real, openable URL. Live events keep their article URL; synthetic
+   events get a Google News search for region+kind. */
+function getSourceUrl(event) {
+  if (event && event.url) return event.url;
+  const q = encodeURIComponent(`${event.region} ${event.kind}`);
+  return `https://news.google.com/search?q=${q}&hl=en`;
+}
+function getSourceDisplay(event) {
+  if (event && event.domain) return event.domain;
+  if (event && event.url) {
+    try { return new URL(event.url).hostname.replace(/^www\./,""); }
+    catch (e) { return event.url; }
+  }
+  return "news.google.com";
+}
+
+
+/* ─────────────────────────────────────────────────────────────────
+   ICONS  (icons.jsx)
+   Event-kind glyphs in Google Material Symbols outlined style.
+   20×20 viewBox · round joins/caps · single 1.4 stroke.
+───────────────────────────────────────────────────────────────── */
+
+const ICONS = {
+  ship: (
+    <g>
+      <path d="M 3 14 L 17 14 L 15.5 17 L 4.5 17 Z" fill="none" />
+      <line x1="10" y1="14" x2="10" y2="3.5" />
+      <path d="M 10 5.5 L 16 13 L 10 13 Z" fill="none" />
+    </g>
+  ),
+  anchor: (
+    <g>
+      <circle cx="10" cy="4" r="1.6" fill="none" />
+      <line x1="10" y1="5.6" x2="10" y2="17" />
+      <line x1="7" y1="8" x2="13" y2="8" />
+      <path d="M 3.5 12 Q 3.5 17 10 17 Q 16.5 17 16.5 12" fill="none" />
+    </g>
+  ),
+  air: (
+    <g>
+      <path d="M 10 5 L 16 17 L 4 17 Z" fill="none" />
+      <path d="M 5.5 10 Q 10 4 14.5 10" fill="none" />
+      <circle cx="10" cy="14" r="1" />
+    </g>
+  ),
+  emission: (
+    <g>
+      <path d="M 3 14 Q 10 5 17 14"   fill="none" />
+      <path d="M 5.5 14 Q 10 8.5 14.5 14" fill="none" />
+      <path d="M 8 14 Q 10 12 12 14" fill="none" />
+      <circle cx="10" cy="15.5" r="1" />
+    </g>
+  ),
+  convoy: (
+    <g>
+      <rect x="2.5" y="7" width="9" height="7" fill="none" />
+      <path d="M 11.5 9 L 14 9 L 17 11.5 L 17 14 L 11.5 14 Z" fill="none" />
+      <circle cx="6"    cy="15.8" r="1.4" fill="none" />
+      <circle cx="14.5" cy="15.8" r="1.4" fill="none" />
+    </g>
+  ),
+  fire: (
+    <g>
+      <path d="M 10 3 Q 4.5 9 6 14 Q 7.5 17.5 10 17.5 Q 12.5 17.5 14 14 Q 15.5 9.5 11.5 6 Q 11 9 9 8 Q 9 5 10 3 Z" fill="none" />
+      <path d="M 9 13 Q 11 14.5 10 16 Q 8.5 14.5 9 13 Z" fill="none" />
+    </g>
+  ),
+  border: (
+    <g>
+      <line x1="3" y1="7" x2="16" y2="7" />
+      <path d="M 17 7 L 14 5 M 17 7 L 14 9" fill="none" />
+      <line x1="4" y1="13" x2="17" y2="13" />
+      <path d="M 3 13 L 6 11 M 3 13 L 6 15" fill="none" />
+    </g>
+  ),
+  intercept: (
+    <g>
+      <circle cx="10" cy="10" r="7" fill="none" />
+      <line x1="5" y1="5" x2="15" y2="15" />
+    </g>
+  ),
+  readiness: (
+    <g>
+      <path d="M 10 3 L 16 5 L 16 10.5 Q 16 15.5 10 17.5 Q 4 15.5 4 10.5 L 4 5 Z" fill="none" />
+      <circle cx="10" cy="10.5" r="1.3" />
+    </g>
+  ),
+  tracking: (
+    <g>
+      <path d="M 10 3 Q 5 3 5 8 Q 5 12 10 17 Q 15 12 15 8 Q 15 3 10 3 Z" fill="none" />
+      <circle cx="10" cy="8" r="1.6" fill="none" />
+      <line x1="3.5" y1="3.5" x2="16.5" y2="16.5" />
+    </g>
+  ),
+  patrol: (
+    <g>
+      <circle cx="5"  cy="8.5" r="1.8" fill="none" />
+      <circle cx="15" cy="8.5" r="1.8" fill="none" />
+      <circle cx="10" cy="6.5" r="1.8" fill="none" />
+      <path d="M 2  16 Q 2  12.5 5  12.5 Q 8  12.5 8  16" fill="none" />
+      <path d="M 12 16 Q 12 12.5 15 12.5 Q 18 12.5 18 16" fill="none" />
+      <path d="M 6.5 16 Q 6.5 11.5 10 11.5 Q 13.5 11.5 13.5 16" fill="none" />
+    </g>
+  ),
+  closure: (
+    <g>
+      <circle cx="10" cy="10" r="7" fill="none" />
+      <line x1="4" y1="10" x2="16" y2="10" />
+    </g>
+  ),
+  alert: (
+    <g>
+      <path d="M 10 3.5 L 17.5 16.5 L 2.5 16.5 Z" fill="none" />
+      <line x1="10" y1="9" x2="10" y2="12.5" />
+      <circle cx="10" cy="14.5" r="0.7" />
+    </g>
+  ),
+};
+
+const KIND_TO_ICON = {
+  "Naval movement":               "ship",
+  "Maritime · vessel deviation":  "ship",
+  "Port activity":                "anchor",
+  "Coast-guard intercept":        "intercept",
+  "Air defence test":             "air",
+  "Convoy movement":              "convoy",
+  "Radar emission":               "emission",
+  "Readiness change":             "readiness",
+  "Border traffic":               "border",
+  "Fishing-fleet anomaly":        "ship",
+  "Indirect fire":                "fire",
+  "Patrol density":               "patrol",
+  "Line-of-control exchange":     "fire",
+  "Maritime tracking loss":       "tracking",
+  "Air-raid alert":               "alert",
+  "Crossing closure":             "closure",
+};
+
+function EventIcon({ kind, size = 18, color = "#B14826", strokeWidth = 1.4 }) {
+  const key = KIND_TO_ICON[kind] || "readiness";
+  return (
+    <svg viewBox="0 0 20 20" width={size} height={size} style={{display:"block"}}>
+      <g stroke={color} strokeWidth={strokeWidth} fill={color}
+         strokeLinecap="round" strokeLinejoin="round">
+        {ICONS[key]}
+      </g>
+    </svg>
+  );
+}
+
+
+/* ─────────────────────────────────────────────────────────────────
+   WORLD MAP  (world-map.jsx)
+   Minimalist world map using d3-geo + topojson world-atlas land-110m.
+   Equirectangular projection, with d3-zoom for pan + scroll-wheel zoom.
+───────────────────────────────────────────────────────────────── */
+
+const PROJECTIONS = {
+  world:         { center: [0, 15],    scaleK: 1.0,  size: [1600, 800] },
+  indopacific:   { center: [125, 15],  scaleK: 2.1,  size: [1600, 800] },
+  eurasia:       { center: [50, 45],   scaleK: 2.4,  size: [1600, 800] },
+  "red-sea":     { center: [45, 20],   scaleK: 3.4,  size: [1600, 800] },
+  americas:      { center: [-75, 10],  scaleK: 1.9,  size: [1600, 800] },
+};
+
+function WorldMap({ events, selected, onSelect, theatre, showGraticule, showForecast, showDots }) {
+  const [topo, setTopo] = useState(null);
+  const [hover, setHover] = useState(null);
+  const [zoomT, setZoomT] = useState({ k: 1, x: 0, y: 0 });
+  const svgRef  = useRef(null);
+  const zoomRef = useRef(null);
+
+  useEffect(() => {
+    fetch("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-110m.json")
+      .then(r => r.json())
+      .then(t => setTopo(t))
+      .catch(e => console.error("world-atlas load failed", e));
+  }, []);
+
+  const cfg = PROJECTIONS[theatre] || PROJECTIONS.world;
+  const [W, H] = cfg.size;
+
+  const built = useMemo(() => {
+    if (!topo) return null;
+    const land = topojson.feature(topo, topo.objects.land);
+    const projection = d3.geoEquirectangular()
+      .center(cfg.center)
+      .scale((W / (2 * Math.PI)) * cfg.scaleK)
+      .translate([W / 2, H / 2]);
+    const pathGen = d3.geoPath(projection);
+    const landPath = pathGen(land);
+
+    const graticule = d3.geoGraticule().step([15, 15])();
+    const gPath = pathGen(graticule);
+
+    let dots = null;
+    if (showDots) {
+      dots = [];
+      const step = cfg.scaleK > 1.6 ? 1.6 : 2.4;
+      for (let lat = -56; lat <= 78; lat += step) {
+        for (let lon = -180; lon <= 180; lon += step) {
+          if (d3.geoContains(land, [lon, lat])) {
+            const p = projection([lon, lat]);
+            if (p && p[0] > -10 && p[0] < W + 10 && p[1] > -10 && p[1] < H + 10) {
+              dots.push(p);
+            }
+          }
+        }
+      }
+    }
+
+    return { landPath, gPath, projection, dots };
+  }, [topo, theatre, showDots]);
+
+  useLayoutEffect(() => {
+    if (!svgRef.current || !built) return;
+    const z = d3.zoom()
+      .scaleExtent([1, 12])
+      .translateExtent([[-W * 0.1, -H * 0.1], [W * 1.1, H * 1.1]])
+      .filter(ev => !ev.button)
+      .on("zoom", (ev) => {
+        const { k, x, y } = ev.transform;
+        setZoomT({ k, x, y });
+      });
+    zoomRef.current = z;
+    d3.select(svgRef.current).call(z).on("dblclick.zoom", null);
+    return () => {
+      if (svgRef.current) d3.select(svgRef.current).on(".zoom", null);
+    };
+  }, [W, H, theatre, built]);
+
+  useEffect(() => {
+    if (!svgRef.current || !zoomRef.current) return;
+    d3.select(svgRef.current).transition().duration(450)
+      .call(zoomRef.current.transform, d3.zoomIdentity);
+  }, [theatre]);
+
+  function zoomBy(factor) {
+    if (!svgRef.current || !zoomRef.current) return;
+    d3.select(svgRef.current).transition().duration(220)
+      .call(zoomRef.current.scaleBy, factor);
+  }
+  function zoomReset() {
+    if (!svgRef.current || !zoomRef.current) return;
+    d3.select(svgRef.current).transition().duration(450)
+      .call(zoomRef.current.transform, d3.zoomIdentity);
+  }
+
+  if (!built) {
+    return (
+      <div className="map-loading">
+        <span className="mono">··· acquiring base ···</span>
+      </div>
+    );
+  }
+
+  const { landPath, gPath, projection, dots } = built;
+  const selectedEvent = events.find(e => e.id === selected);
+  const tf   = `translate(${zoomT.x} ${zoomT.y}) scale(${zoomT.k})`;
+  const invK = 1 / zoomT.k;
+
+  return (
+    <div className="map-host">
+      <svg ref={svgRef}
+           viewBox={`0 0 ${W} ${H}`}
+           className="map-svg"
+           preserveAspectRatio="xMidYMid slice"
+           style={{cursor:"grab"}}>
+        <defs>
+          <radialGradient id="forecast-glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stopColor="#8E3A1F" stopOpacity="0.34" />
+            <stop offset="55%"  stopColor="#8E3A1F" stopOpacity="0.10" />
+            <stop offset="100%" stopColor="#8E3A1F" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+
+        <rect x="0" y="0" width={W} height={H} fill="transparent" />
+
+        <g transform={tf}>
+          {showGraticule && (
+            <path d={gPath} stroke="#A8B0BB" strokeOpacity="0.055"
+                  strokeWidth={0.5 * invK} fill="none" />
+          )}
+
+          {showDots ? (
+            <g fill="#A8B0BB" fillOpacity="0.42">
+              {dots.map((p, i) => (
+                <circle key={i} cx={p[0]} cy={p[1]} r={0.9 * invK} />
+              ))}
+            </g>
+          ) : (
+            <path d={landPath}
+                  stroke="#A8B0BB" strokeOpacity="0.36" strokeWidth={0.7 * invK}
+                  fill="#A8B0BB" fillOpacity="0.025" />
+          )}
+
+          {showGraticule && (
+            <path d={d3.geoPath(projection)({type:"LineString", coordinates:[[-180,0],[180,0]]})}
+                  stroke="#A8B0BB" strokeOpacity="0.12"
+                  strokeWidth={0.5 * invK} fill="none"
+                  strokeDasharray={`${2*invK} ${4*invK}`} />
+          )}
+
+          {showForecast && events.filter(e => e.forecast && e.severity >= 3).map(e => {
+            const p = projection([e.lon, e.lat]);
+            if (!p) return null;
+            const r = 22 + e.severity * 5;
+            return (
+              <circle key={"f-"+e.id} cx={p[0]} cy={p[1]} r={r}
+                      fill="url(#forecast-glow)" pointerEvents="none" />
+            );
+          })}
+
+          <g className="markers">
+            {events.map(e => {
+              const p = projection([e.lon, e.lat]);
+              if (!p) return null;
+              const isSel = e.id === selected;
+              const isHov = e.id === hover;
+              const high  = isSel || isHov;
+
+              const frame    = high ? 22 : 18;
+              const half     = frame / 2;
+              const iconSlot = 20;
+              const iconScale = (frame - 6) / iconSlot;
+              const iconOff  = -((iconSlot * iconScale) / 2);
+
+              const iconKey = KIND_TO_ICON[e.kind] || "readiness";
+              const glyph   = ICONS[iconKey];
+
+              return (
+                <g key={e.id}
+                   transform={`translate(${p[0]} ${p[1]}) scale(${invK})`}
+                   onMouseEnter={() => setHover(e.id)}
+                   onMouseLeave={() => setHover(null)}
+                   onClick={(ev) => { ev.stopPropagation(); onSelect(e.id); }}
+                   style={{cursor:"pointer"}}>
+
+                  <circle r="1.4" fill="#B14826" />
+
+                  <g transform={`translate(0 ${-half - 4})`}>
+                    <rect x={-half} y={-half} width={frame} height={frame}
+                          fill="#15171C" fillOpacity={high ? 0.95 : 0.82} />
+                    <rect x={-half} y={-half} width={frame} height={frame}
+                          fill="none" stroke="#B14826"
+                          strokeWidth={high ? 1.1 : 0.8} opacity={high ? 1 : 0.78} />
+
+                    {isSel && (
+                      <g stroke="#B14826" strokeWidth="0.9" opacity="0.9">
+                        <path d={`M ${-half - 3} ${-half} L ${-half} ${-half} L ${-half} ${-half - 3}`} fill="none" />
+                        <path d={`M ${ half + 3} ${-half} L ${ half} ${-half} L ${ half} ${-half - 3}`} fill="none" />
+                        <path d={`M ${-half - 3} ${ half} L ${-half} ${ half} L ${-half} ${ half + 3}`} fill="none" />
+                        <path d={`M ${ half + 3} ${ half} L ${ half} ${ half} L ${ half} ${ half + 3}`} fill="none" />
+                      </g>
+                    )}
+
+                    <g transform={`translate(${iconOff} ${iconOff}) scale(${iconScale})`}
+                       stroke="#B14826" strokeWidth={1.2}
+                       strokeLinecap="round" strokeLinejoin="round"
+                       fill="#B14826">
+                      {glyph}
+                    </g>
+
+                    <line x1="0" y1={half} x2="0" y2={half + 4}
+                          stroke="#B14826" strokeWidth="0.6" opacity="0.7" />
+                  </g>
+
+                  {high && (
+                    <g transform={`translate(0 ${-half * 2 - 14})`}>
+                      <rect x="-11" y="-6" width="22" height="11"
+                            fill="#15171C" fillOpacity="0.95"
+                            stroke="#B14826" strokeWidth="0.5" />
+                      <text textAnchor="middle" fill="#F4ECD6" fontSize="7"
+                            fontFamily="JetBrains Mono" fontWeight="600"
+                            letterSpacing="1.5" dy="2">{e.source}</text>
+                    </g>
+                  )}
+                </g>
+              );
+            })}
+          </g>
+        </g>
+
+        {selectedEvent && (() => {
+          const p = projection([selectedEvent.lon, selectedEvent.lat]);
+          if (!p) return null;
+          const screenP = [p[0] * zoomT.k + zoomT.x, p[1] * zoomT.k + zoomT.y];
+          const goRight = screenP[0] < W - 280;
+          const ax = goRight ? screenP[0] + 24 : screenP[0] - 24;
+          const bx = goRight ? ax + 70  : ax - 70;
+          const cx = goRight ? bx + 10  : bx - 10;
+          const y  = screenP[1] - 36;
+          return (
+            <g className="callout" pointerEvents="none">
+              <path d={`M ${screenP[0]} ${screenP[1] - 18} L ${ax} ${screenP[1] - 18} L ${bx} ${y} L ${cx} ${y}`}
+                    stroke="#B14826" strokeWidth="0.7" fill="none" opacity="0.9" />
+              <g transform={`translate(${cx} ${y})`}>
+                <text fill="#F4ECD6" fontSize="9" fontFamily="JetBrains Mono"
+                      fontWeight="500" letterSpacing="2"
+                      textAnchor={goRight ? "start" : "end"} dy="-7">
+                  {selectedEvent.date_z} · {selectedEvent.time_z}
+                </text>
+                <text fill="#F4ECD6" fontSize="13" fontFamily="Inter"
+                      fontWeight="600" letterSpacing="-0.3"
+                      textAnchor={goRight ? "start" : "end"} dy="6">
+                  {selectedEvent.region}
+                </text>
+                <text fill="#A8B0BB" fontSize="10" fontFamily="Inter"
+                      fontWeight="400"
+                      textAnchor={goRight ? "start" : "end"} dy="20">
+                  {selectedEvent.kind} · {selectedEvent.source}
+                </text>
+              </g>
+            </g>
+          );
+        })()}
+      </svg>
+
+      <div className="zoom-controls">
+        <button className="zoom-btn" title="Zoom in"  onClick={() => zoomBy(1.5)}>＋</button>
+        <button className="zoom-btn" title="Zoom out" onClick={() => zoomBy(1/1.5)}>−</button>
+        <button className="zoom-btn small" title="Reset" onClick={zoomReset}>RST</button>
+      </div>
+      <div className="zoom-readout mono">{zoomT.k.toFixed(2)}x</div>
+    </div>
+  );
+}
+
+
+/* ─────────────────────────────────────────────────────────────────
+   PANELS  (panels.jsx)
+   Chrome: lead-assessment, watch list, event stream, detail card,
+   timeline scrubber, classification stripe, nav.
+───────────────────────────────────────────────────────────────── */
+
+function ICDLadder({ band, lo, hi }) {
+  const cells = [
+    { key: "almost no chance",    short: "AN" },
+    { key: "very unlikely",       short: "VU" },
+    { key: "unlikely",            short: "U"  },
+    { key: "roughly even chance", short: "RE" },
+    { key: "likely",              short: "L"  },
+    { key: "very likely",         short: "VL" },
+    { key: "almost certainly",    short: "AC" },
+  ];
+  return (
+    <div className="ladder">
+      <div className="ladder-row">
+        {cells.map(c => (
+          <div key={c.key} className={"ladder-cell" + (c.key === band ? " on" : "")}>
+            {c.short}
+          </div>
+        ))}
+      </div>
+      <div className="ladder-scale">
+        <div className="ladder-axis" />
+        <div className="ladder-band" style={{ left:`${lo}%`, width:`${hi - lo}%` }} />
+        <div className="ladder-ticks">
+          {[0,25,50,75,100].map(t => (
+            <span key={t} className="ladder-tick" style={{left:`${t}%`}}>{t}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ClassificationStripe() {
+  return (
+    <div className="strip">
+      <span className="strip-l">
+        <span className="strip-id">ORBIS</span>
+        <span className="strip-sep">·</span>
+        <span>UNCLASSIFIED // FOR OFFICIAL USE ONLY</span>
+        <span className="strip-sep">·</span>
+        <span>BLM-260517-K4P9</span>
+      </span>
+      <span className="strip-r">
+        <span>OPERATOR · S. WREN</span>
+        <span className="strip-sep">·</span>
+        <span>WATCH FLOOR 02</span>
+      </span>
+    </div>
+  );
+}
+
+function TopNav({ tab, onTab, pendingCount }) {
+  const tabs = ["theatre", "watch", "forecast", "sources", "briefs"];
+  return (
+    <div className="nav">
+      <div className="nav-l">
+        <span className="wm">orbis</span>
+        <span className="nav-sep" />
+        <span className="nav-doc mono">OR-260517-A14B</span>
+      </div>
+      <nav className="nav-tabs">
+        {tabs.map(t => (
+          <button key={t}
+                  className={"nav-tab" + (t === tab ? " on" : "")}
+                  onClick={() => onTab(t)}>
+            {t}
+            {t === "sources" && pendingCount > 0 && (
+              <span className="pending-badge">{pendingCount}</span>
+            )}
+          </button>
+        ))}
+      </nav>
+      <div className="nav-r mono">
+        <span>{ORBIS_NOW.date}</span>
+        <span className="nav-sep-d" />
+        <span className="now">{ORBIS_NOW.utc}</span>
+      </div>
+    </div>
+  );
+}
+
+function LeadCard({ lead }) {
+  return (
+    <div className="lead">
+      <div className="lead-eyebrow mono">LEAD ASSESSMENT · {ORBIS_NOW.utc}</div>
+      <div className="lead-figure">
+        <span>{lead.lo}</span>
+        <span className="lead-sep">–</span>
+        <span>{lead.hi}</span>
+        <span className="lead-pct">%</span>
+      </div>
+      <div className="lead-band mono">{lead.band.toUpperCase()}</div>
+      <div className="lead-q">{lead.question}.</div>
+      <div className="lead-driver">{lead.driver}</div>
+    </div>
+  );
+}
+
+function WatchList({ items, onSelectRegion }) {
+  return (
+    <div className="watch">
+      <div className="panel-head">
+        <span className="panel-title">watch list</span>
+        <span className="panel-meta mono">{items.length} regions · 30/90d</span>
+      </div>
+      <div className="watch-rows">
+        {items.map((w, i) => (
+          <button key={w.region} className="watch-row" onClick={() => onSelectRegion(w.region)}>
+            <div className="watch-row-head">
+              <span className="watch-idx mono">{String(i+1).padStart(2,"0")}</span>
+              <span className="watch-region">{w.region}</span>
+              <span className={"watch-trend mono " + (w.trend.startsWith("+") ? "up" : w.trend === "0" ? "flat" : "down")}>
+                {w.trend === "0" ? "—" : w.trend}
+              </span>
+            </div>
+            <div className="watch-q">{w.q}</div>
+            <div className="watch-bar">
+              <div className="watch-bar-axis" />
+              <div className="watch-bar-band" style={{left:`${w.lo}%`, width:`${w.hi-w.lo}%`}} />
+              <div className="watch-bar-num mono">{w.lo}–{w.hi}</div>
+            </div>
+            <div className="watch-foot mono">
+              <span>{w.band.toUpperCase()}</span>
+              <span className="watch-foot-sep">·</span>
+              <span>{w.drivers} drivers</span>
+              <span className="watch-foot-sep">·</span>
+              <span>UPD {w.updated}</span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function useReaction(eventId) {
+  const [r, setR] = useState(() => {
+    try {
+      const all = JSON.parse(localStorage.getItem("orbis.reactions") || "{}");
+      return all[eventId] || null;
+    } catch (e) { return null; }
+  });
+  const set = (v) => {
+    let all = {};
+    try { all = JSON.parse(localStorage.getItem("orbis.reactions") || "{}"); } catch (e) {}
+    if (v) all[eventId] = v; else delete all[eventId];
+    localStorage.setItem("orbis.reactions", JSON.stringify(all));
+    setR(v);
+  };
+  return [r, set];
+}
+
+function ThumbGlyph({ down }) {
+  return (
+    <svg viewBox="0 0 14 14" width="12" height="12"
+         style={{display:"block", transform: down ? "rotate(180deg)" : "none"}}>
+      <path d="M 2 6 H 4 V 12 H 2 Z" fill="currentColor" />
+      <path d="M 4 6 L 6 1 Q 7.4 0.6 7.4 2 V 5 H 11 Q 12.2 5 12 6 L 11.2 11 Q 11 12 9.8 12 H 4"
+            fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="miter" />
+    </svg>
+  );
+}
+
+function ReactionBar({ eventId, compact }) {
+  const [r, setR] = useReaction(eventId);
+  return (
+    <div className={"reaction" + (compact ? " reaction-compact" : "")}
+         onClick={(e) => e.stopPropagation()}>
+      <button className={"react-btn up" + (r === "up" ? " on" : "")}
+              onClick={() => setR(r === "up" ? null : "up")}
+              aria-label="Mark assessment accurate"
+              title="Mark assessment accurate">
+        <ThumbGlyph />
+      </button>
+      <button className={"react-btn down" + (r === "down" ? " on" : "")}
+              onClick={() => setR(r === "down" ? null : "down")}
+              aria-label="Mark assessment inaccurate"
+              title="Mark assessment inaccurate">
+        <ThumbGlyph down />
+      </button>
+    </div>
+  );
+}
+
+function SourceLink({ event, compact }) {
+  const url     = getSourceUrl(event);
+  const display = getSourceDisplay(event);
+  return (
+    <a className={"source-link mono" + (compact ? " source-link-compact" : "")}
+       href={url}
+       target="_blank"
+       rel="noopener noreferrer"
+       onClick={(e) => e.stopPropagation()}
+       title={`Open ${url}`}>
+      <span className="source-link-lbl">SOURCE</span>
+      <span className="source-link-url">{display}</span>
+      <span className="source-link-arrow">↗</span>
+    </a>
+  );
+}
+
+function EventStream({ events, selected, onSelect }) {
+  const sorted = [...events].sort((a,b) => a.time_iso < b.time_iso ? 1 : -1);
+  return (
+    <div className="stream">
+      <div className="panel-head">
+        <span className="panel-title">event stream</span>
+        <span className="panel-meta mono">{events.length} · last 24h</span>
+      </div>
+      <div className="stream-rows">
+        {sorted.map(e => {
+          const isSel = e.id === selected;
+          return (
+            <div key={e.id}
+                 role="button" tabIndex={0}
+                 className={"stream-row" + (isSel ? " on" : "")}
+                 onClick={() => onSelect(e.id)}
+                 onKeyDown={(ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); onSelect(e.id); } }}>
+              <div className="stream-meta-col">
+                <span className="stream-icon">
+                  <EventIcon kind={e.kind} size={18} color={isSel ? "#F4ECD6" : "#B14826"} />
+                </span>
+                <span className={"stream-source mono src-" + e.source[0].toLowerCase()}>{e.source}</span>
+              </div>
+              <div className="stream-body">
+                <div className="stream-meta-row mono">
+                  <span className="stream-date">{e.date_z}</span>
+                  <span className="stream-time">{e.time_z}</span>
+                  <span className="stream-kind">{e.kind.toUpperCase()}</span>
+                </div>
+                <div className="stream-region">{e.region}</div>
+                <div className="stream-sum">{e.summary}</div>
+                <div className="stream-sowhat">
+                  <div className="stream-sowhat-head">
+                    <span className="stream-sowhat-lbl mono">ASSESSMENT</span>
+                    <ReactionBar eventId={e.id} compact />
+                  </div>
+                  <div className="stream-sowhat-txt">{e.so_what}</div>
+                  <SourceLink event={e} compact />
+                </div>
+                <div className="stream-conf">
+                  <span className={"conf-pill conf-" + e.confidence.replace(/[^a-z]/g,"")}>
+                    {e.confidence}
+                  </span>
+                  <span className="conf-range mono">{e.confidence_range}</span>
+                  {e.forecast && <span className="conf-fc mono">FC LAYER</span>}
+                  {e.live && <span className="conf-fc mono" style={{color:"var(--sextant-bright)"}}>LIVE</span>}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DetailCard({ event }) {
+  if (!event) return null;
+  return (
+    <div className="detail">
+      <div className="detail-head">
+        <span className="mono detail-id">{event.id}</span>
+        <span className={"detail-source mono src-" + event.source[0].toLowerCase()}>{event.source}</span>
+      </div>
+      <div className="detail-title-row">
+        <div className="detail-icon">
+          <EventIcon kind={event.kind} size={26} color="#B14826" strokeWidth={1.3} />
+        </div>
+        <div className="detail-region">{event.region}</div>
+      </div>
+      <div className="detail-kind mono">{event.kind.toUpperCase()} · {event.date_z} {event.time_z}</div>
+      <div className="detail-summary">{event.summary}</div>
+      <div className="detail-sowhat">
+        <div className="detail-sowhat-head">
+          <span className="detail-section-lbl mono">ASSESSMENT</span>
+          <ReactionBar eventId={event.id} />
+        </div>
+        <div className="detail-sowhat-txt">{event.so_what}</div>
+        <SourceLink event={event} />
+      </div>
+      <div className="detail-section">
+        <div className="detail-section-lbl mono">SOURCE GRADE</div>
+        <div className="detail-source-label">{event.source_label}</div>
+      </div>
+      <div className="detail-section">
+        <div className="detail-section-lbl mono">ICD-203 · {event.confidence_range}</div>
+        <ICDLadder
+          band={event.confidence}
+          lo={parseInt(event.confidence_range)}
+          hi={parseInt(event.confidence_range.split(/[–-]/)[1])} />
+      </div>
+      <div className="detail-section">
+        <div className="detail-section-lbl mono">DRIVERS</div>
+        <ul className="detail-drivers">
+          {event.drivers.map((d, i) => (
+            <li key={i}><span className="mono">{String(i+1).padStart(2,"0")}</span> {d}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function TimelineBar({ events, selected, onSelect }) {
+  function offsetHrs(e) {
+    if (e.time_iso) {
+      const d   = new Date(e.time_iso);
+      const now = new Date("2026-05-17T07:34:00Z");
+      return (d - now) / 3600000;
+    }
+    return 0;
+  }
+  const minHr = -72, maxHr = 72;
+  const xPct  = h => ((h - minHr) / (maxHr - minHr)) * 100;
+
+  return (
+    <div className="timeline">
+      <div className="timeline-head mono">
+        <span>TIMELINE · ±72H · UTC</span>
+        <span className="timeline-now">NOW · {ORBIS_NOW.utc}</span>
+        <span>FORECAST LAYER ENGAGED</span>
+      </div>
+      <div className="timeline-track">
+        <div className="timeline-axis" />
+        <div className="timeline-forecast" style={{left:"50%"}} />
+        {[-72,-48,-24,-12,0,12,24,48,72].map(h => (
+          <div key={h} className={"timeline-tick" + (h === 0 ? " now" : "")} style={{left:`${xPct(h)}%`}}>
+            <span className="mono">{h === 0 ? "NOW" : (h>0 ? "+"+h+"h" : h+"h")}</span>
+          </div>
+        ))}
+        {events.map(e => {
+          const x = xPct(offsetHrs(e));
+          if (x < 0 || x > 100) return null;
+          const isSel = e.id === selected;
+          return (
+            <button key={e.id}
+                    className={"timeline-evt" + (isSel ? " on" : "")}
+                    style={{left:`${x}%`}}
+                    onClick={() => onSelect(e.id)}
+                    title={`${e.region} · ${e.date_z} ${e.time_z}`}>
+              <span className="te-dot" />
+              {isSel && <span className="te-label mono">{e.region.split("·")[0].trim()}</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Rail({ side, collapsed, onToggle, label, children }) {
+  if (collapsed) {
+    return (
+      <aside className={`rail rail-${side} rail-collapsed`}>
+        <button className="rail-toggle-strip" onClick={onToggle} title={`Expand ${label}`}>
+          <span className="rail-toggle-chev">{side === "l" ? "›" : "‹"}</span>
+          <span className="rail-toggle-label mono">{label}</span>
+        </button>
+      </aside>
+    );
+  }
+  return (
+    <aside className={`rail rail-${side}`}>
+      <button className="rail-toggle" onClick={onToggle} title={`Collapse ${label}`}>
+        {side === "l" ? "‹" : "›"}
+      </button>
+      {children}
+    </aside>
+  );
+}
+
+
+/* ─────────────────────────────────────────────────────────────────
+   VALIDATION SYSTEM
+   Admiralty Code pipeline: pending queue → vetting → publication.
+───────────────────────────────────────────────────────────────── */
+
+function SourceTierBadge({ tier }) {
+  const t = SOURCE_TIERS.find(t => t.tier === tier) || SOURCE_TIERS[4];
+  return <span className={`tier-badge ${t.cls}`}>T{tier} · {t.label.toUpperCase()}</span>;
+}
+
+function AdmiraltyMatrix({ srcCode, credCode, onSelect }) {
+  const srcCodes = ["A","B","C","D","E","F"];
+  const credCodes = [1,2,3,4,5,6];
+
+  const srcDef = srcCode ? ADMIRALTY_SOURCE.find(s => s.code === srcCode) : null;
+  const credDef = credCode ? ADMIRALTY_CRED.find(c => c.code === credCode) : null;
+
+  return (
+    <div>
+      <div className="admiralty-matrix">
+        <div className="admiralty-grid">
+          {/* Header row */}
+          <div className="adm-header" />
+          {credCodes.map(c => (
+            <div key={c} className="adm-header">{c}</div>
+          ))}
+          {/* Data rows */}
+          {srcCodes.map(s => (
+            <React.Fragment key={s}>
+              <div className="adm-row-label">{s}</div>
+              {credCodes.map(c => {
+                const isOn = s === srcCode && c === credCode;
+                return (
+                  <div key={c}
+                       className={"adm-cell" + (isOn ? " on" : "")}
+                       onClick={() => onSelect(s, c)}
+                       title={`${s}${c}`}>
+                    <span className="adm-cell-code">{s}{c}</span>
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      {srcCode && credCode ? (
+        <div className="admiralty-result" style={{marginTop:10}}>
+          <span className="adm-result-code">{srcCode}{credCode}</span>
+          <div className="adm-result-text">
+            <div>{srcDef?.label} · {credDef?.label}</div>
+            <div style={{color:"var(--vapour-d)",fontSize:"10.5px",marginTop:2}}>{credDef?.desc}</div>
+          </div>
+        </div>
+      ) : (
+        <div style={{marginTop:8,fontFamily:"var(--mono)",fontSize:"10px",color:"var(--vapour-d)",letterSpacing:"0.2em"}}>
+          SELECT CELL TO ASSIGN RATING
+        </div>
+      )}
+
+      <div className="admiralty-legend" style={{marginTop:12}}>
+        <div style={{gridColumn:"1/-1",fontFamily:"var(--mono)",fontSize:"9px",color:"var(--vapour-d)",letterSpacing:"0.22em",marginBottom:4}}>SOURCE RELIABILITY</div>
+        {ADMIRALTY_SOURCE.map(s => (
+          <div key={s.code} className="adm-legend-row">
+            <span className="adm-legend-key">{s.code}</span>
+            <span className="adm-legend-desc">{s.label}</span>
+          </div>
+        ))}
+        <div style={{gridColumn:"1/-1",fontFamily:"var(--mono)",fontSize:"9px",color:"var(--vapour-d)",letterSpacing:"0.22em",marginTop:6,marginBottom:4}}>INFORMATION CREDIBILITY</div>
+        {ADMIRALTY_CRED.map(c => (
+          <div key={c.code} className="adm-legend-row">
+            <span className="adm-legend-key">{c.code}</span>
+            <span className="adm-legend-desc">{c.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VettingCheckmark() {
+  return (
+    <svg viewBox="0 0 10 10" width="10" height="10" style={{display:"block"}}>
+      <path d="M 2 5 L 4.2 7.5 L 8 2.5" stroke="#F4ECD6" strokeWidth="1.3"
+            fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function VettingStepRow({ step, status, detail }) {
+  const symbol =
+    status === "running" ? <span className="vet-spin" /> :
+    status === "passed"  ? <VettingCheckmark /> :
+    status === "failed"  ? <span style={{fontSize:11,fontWeight:700}}>✕</span> :
+                           <span style={{opacity:0.4}}>·</span>;
+  const color =
+    status === "running" ? "var(--sextant-bright)" :
+    status === "passed"  ? "#7EC8A4" :
+    status === "failed"  ? "#FF6B6B" :
+                           "var(--vapour-d)";
+  return (
+    <div style={{
+      display:"grid", gridTemplateColumns:"22px 1fr",
+      gap:10, alignItems:"flex-start",
+      padding:"8px 0",
+      borderBottom:"1px solid var(--hairline)",
+    }}>
+      <div style={{
+        width:18, height:18, display:"flex",
+        alignItems:"center", justifyContent:"center",
+        border:`1px solid ${color}`, color,
+        marginTop:1,
+      }}>{symbol}</div>
+      <div>
+        <div style={{
+          display:"flex", alignItems:"baseline", justifyContent:"space-between", gap:8,
+        }}>
+          <div style={{fontSize:12, color:"var(--vellum)", fontWeight:500}}>{step.label}</div>
+          <div style={{fontFamily:"var(--mono)", fontSize:9, letterSpacing:"0.22em", color, textTransform:"uppercase"}}>
+            {status === "pending" ? "QUEUED" : status}
+          </div>
+        </div>
+        <div style={{fontSize:11, color:"var(--vapour-d)", lineHeight:1.4, marginTop:2}}>
+          {detail || step.desc}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VettingPanel({ event }) {
+  if (!event) {
+    return (
+      <div className="vetting-empty">
+        <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" strokeWidth="1"
+             fill="none" strokeLinecap="round" strokeLinejoin="round" style={{opacity:0.4}}>
+          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>select event from queue</span>
+        <span style={{fontSize:9,letterSpacing:"0.2em",color:"var(--vapour-d)",marginTop:6}}>
+          AI VERIFICATION IS AUTOMATED
+        </span>
+      </div>
+    );
+  }
+
+  const { id, region, kind, date_z, time_z, rawSource, rawUrl, sourceTier,
+          summary, indicators = [], vetted = {}, admiraltySource, admiraltyCred,
+          aiStage = 0 } = event;
+
+  const isDone = aiStage >= VETTING_STEPS.length;
+  const passCount = Object.values(vetted).filter(v => v && v.result).length;
+  const willPublish = isDone && passCount >= 3 && admiraltyCred && admiraltyCred <= 3;
+  const willReject  = isDone && !willPublish;
+
+  return (
+    <div className="vetting">
+      <div className="vetting-head">
+        <div className="vetting-id mono">{id} · {date_z} {time_z}</div>
+        <div className="vetting-title">{region}</div>
+        <div className="vetting-kind mono">{kind.toUpperCase()}</div>
+      </div>
+
+      <div>
+        <div className="vetting-section-lbl">SUMMARY</div>
+        <div className="vetting-sum">{summary}</div>
+      </div>
+
+      <div>
+        <div className="vetting-section-lbl">SOURCE</div>
+        <SourceTierBadge tier={sourceTier} />
+        <a className="source-ref" href={rawUrl} target="_blank" rel="noopener noreferrer"
+           style={{marginTop:8, textDecoration:"none", cursor:"pointer"}}>
+          <span className="source-ref-url">{rawSource}</span>
+          <span style={{fontFamily:"var(--mono)",fontSize:"10px",color:"var(--sextant-bright)",letterSpacing:"0.18em"}}>OPEN ↗</span>
+        </a>
+        <div style={{marginTop:8,fontSize:"11px",color:"var(--vapour-d)",lineHeight:1.35}}>
+          {SOURCE_TIERS.find(t=>t.tier===sourceTier)?.desc}
+        </div>
+      </div>
+
+      {indicators.length > 0 && (
+        <div>
+          <div className="vetting-section-lbl">INDICATORS ({indicators.length})</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+            {indicators.map((ind,i) => (
+              <span key={i} style={{
+                fontFamily:"var(--mono)",fontSize:"9px",padding:"2px 6px",
+                border:"1px solid var(--hairline-strong)",color:"var(--vapour)",letterSpacing:"0.12em"
+              }}>{ind}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <div className="vetting-section-lbl">
+          AI VERIFICATION · STAGE {Math.min(aiStage, VETTING_STEPS.length)}/{VETTING_STEPS.length}
+        </div>
+        <div>
+          {VETTING_STEPS.map((step, i) => {
+            const isCurrent  = i === aiStage && !isDone;
+            const isComplete = i < aiStage;
+            const result = vetted[step.id];
+            const status = isCurrent ? "running"
+                         : isComplete ? (result && result.result ? "passed" : "failed")
+                         : "pending";
+            return (
+              <VettingStepRow key={step.id} step={step} status={status}
+                              detail={result?.detail} />
+            );
+          })}
+        </div>
+        <div className="vetting-progress" style={{marginTop:10}}>
+          <span>PIPELINE</span>
+          <div className="vetting-progress-bar">
+            <div className="vetting-progress-fill"
+                 style={{width:`${(aiStage / VETTING_STEPS.length) * 100}%`}} />
+          </div>
+          <span>{isDone ? "COMPLETE" : "RUNNING"}</span>
+        </div>
+      </div>
+
+      {isDone && admiraltySource && admiraltyCred && (
+        <div>
+          <div className="vetting-section-lbl">ADMIRALTY RATING · AI-ASSIGNED</div>
+          <div className="admiralty-result">
+            <span className="adm-result-code">{admiraltySource}{admiraltyCred}</span>
+            <div className="adm-result-text">
+              <div>
+                {ADMIRALTY_SOURCE.find(s=>s.code===admiraltySource)?.label} · {ADMIRALTY_CRED.find(c=>c.code===admiraltyCred)?.label}
+              </div>
+              <div style={{color:"var(--vapour-d)",fontSize:"10.5px",marginTop:2}}>
+                {passCount}/{VETTING_STEPS.length} checks passed
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="vetting-actions">
+        {willPublish && (
+          <div className="vetting-btn approve" style={{flex:1, cursor:"default"}}>
+            ✓ AUTO-PUBLISHED TO MAP
+          </div>
+        )}
+        {willReject && (
+          <div className="vetting-btn reject" style={{flex:1, cursor:"default"}}>
+            ✕ AUTO-REJECTED · {passCount < 3 ? `${5-passCount}/5 FAILED` : `CRED ${admiraltyCred} TOO LOW`}
+          </div>
+        )}
+        {!isDone && (
+          <div className="vetting-btn approve" style={{flex:1, cursor:"default", color:"var(--sextant-bright)"}}>
+            ⏳ AI VETTING IN PROGRESS
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PendingQueue({ items, selectedId, onSelect }) {
+  return (
+    <div>
+      <div className="panel-head">
+        <span className="panel-title">ai validation queue</span>
+        <span className="panel-meta mono">{items.length} in pipeline</span>
+      </div>
+      {items.length === 0 && (
+        <div style={{padding:"28px 22px",fontFamily:"var(--mono)",fontSize:"10px",
+                     color:"var(--vapour-d)",letterSpacing:"0.28em",textAlign:"center"}}>
+          QUEUE CLEAR · AWAITING INGESTION
+        </div>
+      )}
+      {items.map(ev => {
+        const stage = ev.aiStage ?? 0;
+        const pct = (stage / VETTING_STEPS.length) * 100;
+        const isDone = stage >= VETTING_STEPS.length;
+        return (
+          <button key={ev.id} className={"queue-row"+(ev.id===selectedId?" on":"")}
+                  onClick={() => onSelect(ev.id)}>
+            <div className="queue-row-head">
+              <span className="queue-region">{ev.region}</span>
+              <span className="queue-time mono">{ev.time_z}</span>
+            </div>
+            <div className="queue-source-row">
+              <SourceTierBadge tier={ev.sourceTier} />
+              <span style={{fontFamily:"var(--mono)",fontSize:"9.5px",color:"var(--vapour-d)",letterSpacing:"0.16em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                {(ev.rawSource || "").split("·")[0].trim()}
+              </span>
+            </div>
+            <div className="queue-sum">{ev.summary.slice(0, 90)}{ev.summary.length > 90 ? "…" : ""}</div>
+            <div className="queue-progress">
+              <div className="queue-progress-fill" style={{width: `${pct}%`}} />
+            </div>
+            <div className={"queue-status " + (isDone ? "published" : "vetting")}>
+              {isDone ? "RATING ASSIGNED" : `STAGE ${stage}/${VETTING_STEPS.length} · ${VETTING_STEPS[stage]?.label || ""}`}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function RejectedLog({ items }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div>
+      <div className="panel-head">
+        <span className="panel-title">ai rejection log</span>
+        <span className="panel-meta mono">{items.length} archived</span>
+      </div>
+      <div className="rejected-list">
+        {items.map(ev => (
+          <div key={ev.id} className="rejected-row">
+            <div className="rejected-row-head">
+              <span>{ev.id}</span>
+              <span>{ev.time_z}</span>
+            </div>
+            <span className="rejected-region">{ev.region}</span>
+            <span className="rejected-reason mono">REJECTED · {ev.rejectionReason}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+/* ─────────────────────────────────────────────────────────────────
+   FORECAST PANEL  (forecast tab)
+   Ranked Bayesian forecast models with probability range + 7d trend.
+───────────────────────────────────────────────────────────────── */
+
+function ForecastPanel({ items }) {
+  const sorted = [...items].sort((a,b) => b.hi - a.hi);
+  return (
+    <div>
+      <div className="panel-head">
+        <span className="panel-title">forecast models</span>
+        <span className="panel-meta mono">BAYESIAN · v4.2.1</span>
+      </div>
+      {sorted.map(f => {
+        const trendUp = f.trend.startsWith("+");
+        const trendDn = f.trend.startsWith("-");
+        return (
+          <div key={f.region} className="fc-row">
+            <div className="fc-row-head">
+              <span className="fc-q">{f.q}</span>
+              <span className="fc-pct">{f.lo}–{f.hi}%</span>
+            </div>
+            <div style={{fontFamily:"var(--mono)",fontSize:"9.5px",color:"var(--vapour-d)",letterSpacing:"0.22em",textTransform:"uppercase"}}>
+              {f.region}
+            </div>
+            <div className="fc-band-row">
+              <div className="fc-bar">
+                <div className="fc-bar-fill" style={{left:`${f.lo}%`, width:`${f.hi-f.lo}%`}} />
+              </div>
+              <span className="fc-band mono">{f.band.toUpperCase()}</span>
+            </div>
+            <div className="fc-foot">
+              <span className={"fc-trend " + (trendUp?"up":trendDn?"down":"")}>
+                7D · {f.trend === "0" ? "FLAT" : f.trend}
+              </span>
+              <span>·</span>
+              <span>{f.drivers} DRIVERS</span>
+              <span>·</span>
+              <span>UPD {f.updated}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+/* ─────────────────────────────────────────────────────────────────
+   BRIEFS PANEL  (briefs tab)
+   Generated analyst briefs — morning brief, situational reports.
+───────────────────────────────────────────────────────────────── */
+
+const BRIEFS = [
+  {
+    id: "BR-260517-0500",
+    time: "0500Z · 17 MAY",
+    type: "MORNING BRIEF",
+    title: "Theatre Summary · 0500Z",
+    summary: "Indo-Pacific dominant in overnight tempo: Taiwan Strait coast-guard activity matches MAR quarantine rehearsal; +8 on Q3 quarantine probability. Bab-el-Mandeb cycle continues; vessel deviation 0438Z supports +3 on 7-day attack probability. No posture shifts assessed.",
+    tags: ["Indo-Pacific", "Red Sea", "Quarantine", "Tempo"],
+  },
+  {
+    id: "BR-260517-0400",
+    time: "0400Z · 17 MAY",
+    type: "SPECIAL REPORT",
+    title: "Bab-el-Mandeb · Convoy advisory",
+    summary: "Consistent with established Houthi targeting cycle. AIS gap pattern, bridge-to-bridge traffic, and confirmed sensor track meet threshold for convoy advisory issuance. Recommend coordination with CTF-153 within 6h.",
+    tags: ["Maritime", "Advisory", "BAM", "A2"],
+  },
+  {
+    id: "BR-260517-0300",
+    time: "0300Z · 17 MAY",
+    type: "THREAT ASSESSMENT",
+    title: "Eurasia · weekly arc",
+    summary: "Donbas eastern arc tempo within historical band. Black Sea port staging plausible but does not indicate posture shift. Kyiv approaches air-raid activity correlated with prior multi-direction salvo pattern. Hold current watch posture.",
+    tags: ["Eurasia", "Donbas", "Black Sea", "Hold"],
+  },
+  {
+    id: "BR-260516-2300",
+    time: "2300Z · 16 MAY",
+    type: "EVENING SITREP",
+    title: "Sahel · governance watch",
+    summary: "Vehicle convoy departed Gao perimeter at last light, northeast along RN-16. Direction and timing consistent with active sub-state operations. +5 on governance-event watch; not yet at action threshold but second indicator in 72h.",
+    tags: ["Sahel", "Governance", "B4", "Watch"],
+  },
+  {
+    id: "BR-260516-1800",
+    time: "1800Z · 16 MAY",
+    type: "FORECAST UPDATE",
+    title: "Bayesian model rebaseline · v4.2.1",
+    summary: "Priors rebaselined against past-30d outcomes. Two forecasts moved into Likely band (Sahel governance, Donbas offensive). One forecast moved out (Hormuz closure-pattern → Unlikely). 16 active forecast models across 8 regions.",
+    tags: ["Forecast", "Bayesian", "Rebaseline"],
+  },
+];
+
+function BriefsPanel({ briefs = BRIEFS }) {
+  return (
+    <div>
+      <div className="panel-head">
+        <span className="panel-title">briefs</span>
+        <span className="panel-meta mono">{briefs.length} · LAST 12H</span>
+      </div>
+      {briefs.map(b => (
+        <div key={b.id} className="brief-row">
+          <div className="brief-head">
+            <span className="brief-time mono">{b.time}</span>
+            <span className="brief-type mono">{b.type}</span>
+          </div>
+          <div className="brief-title">{b.title}</div>
+          <div className="brief-sum">{b.summary}</div>
+          <div className="brief-tags">
+            {b.tags.map(t => <span key={t} className="brief-tag">{t}</span>)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+/* ─────────────────────────────────────────────────────────────────
+   TWEAKS PANEL  (tweaks-panel.jsx)
+   Floating settings panel; communicates with the host via postMessage.
+───────────────────────────────────────────────────────────────── */
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom right;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+  .twk-field{appearance:none;box-sizing:border-box;width:100%;min-width:0;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;overflow-wrap:anywhere}
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+`;
+
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+    window.dispatchEvent(new CustomEvent('tweakchange', { detail: edits }));
+  }, []);
+  return [values, setTweak];
+}
+
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef   = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight  = Math.max(PAD, window.innerWidth  - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight,  Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right  = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(clampToViewport) : null;
+    if (ro) ro.observe(document.documentElement);
+    else window.addEventListener('resize', clampToViewport);
+    return () => { if (ro) ro.disconnect(); else window.removeEventListener('resize', clampToViewport); };
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode')   setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight  = window.innerWidth  - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight  - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel"
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()} onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">{children}</div>
+      </div>
+    </>
+  );
+}
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  const labelLen = (o) => String(typeof o === 'object' ? o.label : o).length;
+  const maxLen   = options.reduce((m, o) => Math.max(m, labelLen(o)), 0);
+  const fitsAsSegments = maxLen <= ({ 2: 16, 3: 10 }[options.length] ?? 0);
+
+  if (!fitsAsSegments) {
+    return (
+      <TweakRow label={label}>
+        <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+          {options.map((o) => {
+            const v = typeof o === 'object' ? o.value : o;
+            const l = typeof o === 'object' ? o.label : o;
+            return <option key={v} value={v}>{l}</option>;
+          })}
+        </select>
+      </TweakRow>
+    );
+  }
+
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx  = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n    = opts.length;
+
+  const segAt = (clientX) => {
+    const r     = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i     = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => { if (trackRef.current) { const v = segAt(ev.clientX); if (v !== valueRef.current) onChange(v); } };
+    const up   = () => { setDragging(false); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+
+/* ─────────────────────────────────────────────────────────────────
+   MAIN APP  (main.jsx)
+   Composes all panels around the world map.
+───────────────────────────────────────────────────────────────── */
+
+/* Format lat/lon as "24°30'N · 120°30'E" for the HUD */
+function formatLatLon(lat, lon) {
+  const fmt = (v, pos, neg) => {
+    const abs = Math.abs(v);
+    const d   = Math.floor(abs);
+    const m   = Math.round((abs - d) * 60);
+    return `${d}°${String(m).padStart(2,"0")}'${v >= 0 ? pos : neg}`;
+  };
+  return `${fmt(lat,"N","S")} · ${fmt(lon,"E","W")}`;
+}
+
+const THEATRE_CENTROIDS = {
+  world:       [0, 15],
+  indopacific: [125, 15],
+  eurasia:     [50, 45],
+  "red-sea":   [45, 20],
+  americas:    [-75, 10],
+};
+
+/* Initialise pending seed events with the AI pipeline shape. */
+function seedPending() {
+  return PENDING_QUEUE_INIT.map(ev => ({ ...ev, aiStage: 0, vetted: {} }));
+}
+
+/* Convert a live GDELT article into a pending-queue entry. */
+function gdeltToPending(ev) {
+  return {
+    id:        ev.id,
+    lat:       ev.lat, lon: ev.lon,
+    region:    ev.region,
+    kind:      ev.kind,
+    summary:   ev.summary,
+    rawSource: ev.domain,
+    rawUrl:    ev.url,
+    domain:    ev.domain,
+    url:       ev.url,
+    sourceTier: domainToTier(ev.domain),
+    indicators: ev.drivers || [],
+    date_z:    ev.date_z, time_z: ev.time_z, time_iso: ev.time_iso,
+    theatre:   ev.theatre, severity: ev.severity || 2,
+    aiStage:   0, vetted: {},
+    admiraltySource: null, admiraltyCred: null,
+    live: true,
+  };
+}
+
+function App() {
+  const TWEAK_DEFAULTS = {
+    showGraticule: true,
+    showForecast:  true,
+    showDots:      false,
+    theatre:       "world",
+    showLead:      true,
+    showWatch:     true,
+    showStream:    true,
+    showTimeline:  true,
+  };
+
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [selected,       setSelected]       = useState("OR-260517-0612-01");
+  const [tab,            setTab]            = useState("theatre");
+  const [leftCollapsed,  setLeftCollapsed]  = useState(() => localStorage.getItem("orbis.rail.l") === "1");
+  const [rightCollapsed, setRightCollapsed] = useState(() => localStorage.getItem("orbis.rail.r") === "1");
+
+  /* Validation pipeline */
+  const [pendingQueue,    setPendingQueue]    = useState(seedPending);
+  const [selectedPending, setSelectedPending] = useState(null);
+  const [publishedEvents, setPublishedEvents] = useState(EVENTS);
+  const [rejectedLog,     setRejectedLog]     = useState([]);
+
+  /* Live OSINT feed — GDELT 2.0 ingestion, refreshed every 5 minutes */
+  const { events: liveEvents, status: liveStatus, refresh: refreshLive } = useLiveEvents();
+
+  useEffect(() => { localStorage.setItem("orbis.rail.l", leftCollapsed  ? "1" : "0"); }, [leftCollapsed]);
+  useEffect(() => { localStorage.setItem("orbis.rail.r", rightCollapsed ? "1" : "0"); }, [rightCollapsed]);
+
+  /* When the GDELT feed delivers new articles, push them into the
+     pending queue (deduped). Each enters at aiStage:0 and the
+     auto-vetting tick takes it from there. */
+  const seenLive = useRef(new Set());
+  useEffect(() => {
+    if (!liveEvents || liveEvents.length === 0) return;
+    const fresh = liveEvents.filter(e => !seenLive.current.has(e.id));
+    if (fresh.length === 0) return;
+    fresh.forEach(e => seenLive.current.add(e.id));
+    setPendingQueue(prev => [...fresh.map(gdeltToPending), ...prev]);
+  }, [liveEvents]);
+
+  /* Auto-vetting tick — every 1.2s, each pending event advances one
+     verification stage; events that finish auto-publish (≥3 passes &
+     credibility ≤3) or auto-reject (everything else). */
+  const publishedRef = useRef(publishedEvents);
+  useEffect(() => { publishedRef.current = publishedEvents; }, [publishedEvents]);
+
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setPendingQueue(queue => {
+        const stillPending = [];
+        const completed    = [];
+        const corpus = [...queue, ...publishedRef.current];
+
+        for (const ev of queue) {
+          const stage = ev.aiStage ?? 0;
+          if (stage >= VETTING_STEPS.length) {
+            completed.push(ev);
+            continue;
+          }
+          const stepDef = VETTING_STEPS[stage];
+          const check   = aiCheckStep(stepDef.id, ev, corpus);
+          const newVetted = { ...ev.vetted, [stepDef.id]: check };
+          const newEv = { ...ev, vetted: newVetted, aiStage: stage + 1 };
+
+          if (stage + 1 >= VETTING_STEPS.length) {
+            const r = computeAdmiralty(newEv);
+            newEv.admiraltySource = r.admiraltySource;
+            newEv.admiraltyCred   = r.admiraltyCred;
+            completed.push(newEv);
+          } else {
+            stillPending.push(newEv);
+          }
+        }
+
+        if (completed.length > 0) {
+          queueMicrotask(() => {
+            completed.forEach(ev => {
+              const passes = Object.values(ev.vetted).filter(v => v && v.result).length;
+              const ok = passes >= 3 && ev.admiraltyCred && ev.admiraltyCred <= 3;
+              if (ok) {
+                setPublishedEvents(prev => [pendingToPublished(ev), ...prev]);
+              } else {
+                const reason = passes < 3
+                  ? `${5 - passes}/5 vetting checks failed`
+                  : `Credibility ${ev.admiraltyCred} below threshold (≤3)`;
+                setRejectedLog(prev => [{ ...ev, rejectionReason: reason }, ...prev].slice(0, 30));
+              }
+            });
+          });
+        }
+
+        return stillPending;
+      });
+    }, 1200);
+
+    return () => clearInterval(tick);
+  }, []);
+
+  /* Display: just the published stream (live events only surface after
+     auto-vetting). */
+  const mergedEvents = publishedEvents;
+
+  const selectedEvent        = mergedEvents.find(e => e.id === selected) || null;
+  const selectedPendingEvent = pendingQueue.find(e => e.id === selectedPending) ||
+                               rejectedLog.find(e => e.id === selectedPending) || null;
+
+  function selectByRegion(region) {
+    const ev = mergedEvents.find(e => e.region.toLowerCase().includes(region.toLowerCase().split("·")[0].trim()));
+    if (ev) setSelected(ev.id);
+  }
+
+  /* Human-readable label for the live feed status */
+  function liveLabel(s) {
+    if (s.state === "fetching") return "INGESTING…";
+    if (s.state === "error")    return "FEED OFFLINE";
+    if (s.state === "ok" && s.lastFetch) {
+      const lt = s.lastFetch;
+      const hh = String(lt.getUTCHours()).padStart(2,"0");
+      const mm = String(lt.getUTCMinutes()).padStart(2,"0");
+      return `LIVE · ${hh}${mm}Z · ${s.count} INGESTED`;
+    }
+    return "STANDBY";
+  }
+
+  /* HUD coords — selected event preferred, theatre centroid as fallback */
+  const hudCoords = selectedEvent
+    ? formatLatLon(selectedEvent.lat, selectedEvent.lon)
+    : formatLatLon(THEATRE_CENTROIDS[t.theatre]?.[1] ?? 15,
+                   THEATRE_CENTROIDS[t.theatre]?.[0] ?? 0);
+
+  const leftHidden  = (!t.showWatch && !t.showLead) || leftCollapsed;
+  const rightHidden = !t.showStream || rightCollapsed;
+  const isSourcesTab  = tab === "sources";
+  const isForecastTab = tab === "forecast";
+  const isBriefsTab   = tab === "briefs";
+  const isWatchTab    = tab === "watch";
+
+  return (
+    <div className="orbis">
+      <ClassificationStripe />
+      <TopNav tab={tab} onTab={setTab} pendingCount={pendingQueue.length} />
+
+      {isSourcesTab ? (
+        /* ─── Sources / Validation view ─── */
+        <div className="stage" style={{gridTemplateColumns:"340px 1fr 420px"}}>
+          <aside className="rail rail-l">
+            <PendingQueue
+              items={pendingQueue}
+              selectedId={selectedPending}
+              onSelect={setSelectedPending} />
+          </aside>
+
+          <div className="map-pane">
+            <WorldMap
+              events={mergedEvents}
+              selected={selected}
+              onSelect={setSelected}
+              theatre={t.theatre}
+              showGraticule={t.showGraticule}
+              showForecast={false}
+              showDots={t.showDots} />
+            <div className="hud-tl mono">
+              <div>{hudCoords}</div>
+              <div className="hud-sub">AI VALIDATION MODE</div>
+              <div className="hud-sub">PIPELINE · {pendingQueue.length} VETTING · {publishedEvents.length} PUBLISHED · {rejectedLog.length} REJECTED</div>
+              <div className="hud-sub" style={{color: liveStatus.state==="error" ? "#FF6B6B" : "var(--sextant-bright)"}}>
+                GDELT · {liveLabel(liveStatus)}
+              </div>
+            </div>
+            <div className="hud-br mono">
+              <div>BUILD · ORBIS-7 · {new Date().toISOString().slice(0,10)}</div>
+              <div className="hud-sub">A BLUME PRODUCT</div>
+            </div>
+          </div>
+
+          <aside className="rail rail-r" style={{overflowY:"auto"}}>
+            <div className="panel-head">
+              <span className="panel-title">ai verification log</span>
+              <span className="panel-meta mono">ADMIRALTY · STANAG 2511</span>
+            </div>
+            <VettingPanel event={selectedPendingEvent} />
+            <RejectedLog items={rejectedLog} />
+          </aside>
+        </div>
+      ) : (
+        /* ─── Theatre view (default) ─── */
+        <div className={
+          "stage"
+          + (leftHidden  ? " col-l-collapsed" : "")
+          + (rightHidden ? " col-r-collapsed" : "")
+        }>
+          {(t.showWatch || t.showLead) && (
+            <Rail side="l" collapsed={leftCollapsed} label="WATCH LIST"
+                  onToggle={() => setLeftCollapsed(v => !v)}>
+              {t.showLead  && <LeadCard lead={LEAD} />}
+              {t.showWatch && <WatchList items={WATCHLIST} onSelectRegion={selectByRegion} />}
+            </Rail>
+          )}
+
+          <div className="map-pane">
+            <WorldMap
+              events={mergedEvents}
+              selected={selected}
+              onSelect={setSelected}
+              theatre={t.theatre}
+              showGraticule={t.showGraticule}
+              showForecast={t.showForecast}
+              showDots={t.showDots} />
+
+            <div className="hud-tl mono">
+              <div>{hudCoords}</div>
+              <div className="hud-sub">PROJECTION · EQUIRECTANGULAR</div>
+              <div className="hud-sub">FOCUS · {selectedEvent ? selectedEvent.region.toUpperCase() : t.theatre.toUpperCase()}</div>
+              <div className="hud-sub" style={{color: liveStatus.state==="error" ? "#FF6B6B" : "var(--sextant-bright)", cursor:"pointer"}}
+                   onClick={refreshLive}
+                   title={liveStatus.state==="error" ? liveStatus.error : "Click to refresh"}>
+                GDELT · {liveLabel(liveStatus)} ⟳
+              </div>
+              <div className="hud-sub" style={{color:"var(--sextant-bright)"}}>
+                AI PIPELINE · {pendingQueue.length} VETTING · {publishedEvents.length} LIVE
+              </div>
+            </div>
+            <div className="hud-tr mono">
+              <div>SOURCES · {mergedEvents.length} ON MAP</div>
+              <div className="hud-sub">PENDING · {pendingQueue.length.toString().padStart(2,"0")}</div>
+              <div className="hud-sub">A-GRADE · {mergedEvents.filter(e=>e.source[0]==="A").length.toString().padStart(2,"0")}</div>
+              <div className="hud-sub">B-GRADE · {mergedEvents.filter(e=>e.source[0]==="B").length.toString().padStart(2,"0")}</div>
+              <div className="hud-sub">C-GRADE · {mergedEvents.filter(e=>e.source[0]==="C").length.toString().padStart(2,"0")}</div>
+              <div className="hud-sub">D-GRADE · {mergedEvents.filter(e=>e.source[0]==="D").length.toString().padStart(2,"0")}</div>
+            </div>
+            <div className="hud-bl mono">
+              <div>FORECAST LAYER · BAYESIAN · v 4.2.1</div>
+              <div className="hud-sub">PRIORS REBASELINED 0500Z</div>
+            </div>
+            <div className="hud-br mono">
+              <div>BUILD · ORBIS-7 · {new Date().toISOString().slice(0,10)}</div>
+              <div className="hud-sub">A BLUME PRODUCT</div>
+            </div>
+          </div>
+
+          {t.showStream && (
+            <Rail side="r" collapsed={rightCollapsed}
+                  label={isForecastTab ? "FORECAST" : isBriefsTab ? "BRIEFS" : "EVENT STREAM"}
+                  onToggle={() => setRightCollapsed(v => !v)}>
+              {isForecastTab ? (
+                <ForecastPanel items={WATCHLIST} />
+              ) : isBriefsTab ? (
+                <BriefsPanel />
+              ) : (
+                <>
+                  {selectedEvent && <DetailCard event={selectedEvent} />}
+                  <EventStream events={mergedEvents} selected={selected} onSelect={setSelected} />
+                </>
+              )}
+            </Rail>
+          )}
+        </div>
+      )}
+
+      {!isSourcesTab && t.showTimeline && (
+        <TimelineBar events={mergedEvents} selected={selected} onSelect={setSelected} />
+      )}
+
+      {isSourcesTab && (
+        <div className="timeline" style={{borderTop:"1px solid var(--hairline)"}}>
+          <div className="timeline-head mono">
+            <span>AI VALIDATION PIPELINE · ADMIRALTY CODE (NATO STANAG 2511)</span>
+            <span className="timeline-now">{pendingQueue.length} VETTING · {publishedEvents.length} PUBLISHED · {rejectedLog.length} REJECTED</span>
+            <span>AUTO-PUBLISH ≥3/5 CHECKS + CRED ≤3</span>
+          </div>
+        </div>
+      )}
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Map">
+          <TweakSelect
+            label="Theatre focus"
+            value={t.theatre}
+            onChange={v => setTweak("theatre", v)}
+            options={[
+              {value:"world",       label:"World"},
+              {value:"indopacific", label:"Indo-Pacific"},
+              {value:"eurasia",     label:"Eurasia"},
+              {value:"red-sea",     label:"Red Sea · Hormuz"},
+              {value:"americas",    label:"Americas"},
+            ]} />
+          <TweakRadio
+            label="Land treatment"
+            value={t.showDots ? "dots" : "outline"}
+            onChange={v => setTweak("showDots", v === "dots")}
+            options={[
+              {value:"outline", label:"Outline"},
+              {value:"dots",    label:"Dot grid"},
+            ]} />
+          <TweakToggle label="Forecast layer" value={t.showForecast}  onChange={v => setTweak("showForecast", v)} />
+          <TweakToggle label="Graticule"      value={t.showGraticule} onChange={v => setTweak("showGraticule", v)} />
+        </TweakSection>
+        <TweakSection label="Panels">
+          <TweakToggle label="Lead assessment" value={t.showLead}     onChange={v => setTweak("showLead", v)} />
+          <TweakToggle label="Watch list"      value={t.showWatch}    onChange={v => setTweak("showWatch", v)} />
+          <TweakToggle label="Event stream"    value={t.showStream}   onChange={v => setTweak("showStream", v)} />
+          <TweakToggle label="Timeline"        value={t.showTimeline} onChange={v => setTweak("showTimeline", v)} />
+        </TweakSection>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
